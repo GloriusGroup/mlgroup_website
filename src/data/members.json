@@ -1,0 +1,132 @@
+[
+  {
+    "name": "Prof. Dr. Frank Glorius",
+    "role": "Principal Investigator",
+    "image": "https://www.uni-muenster.de/imperia/md/images/organisch_chemisches_institut2/glorius/arbeitsgruppe/frank_glorius.png",
+    "email": "glorius@uni-muenster.de",
+    "description": "Group leader driving research at the intersection of organic chemistry, data science, and machine learning for chemical discovery.",
+    "links": {
+      "website": "https://www.uni-muenster.de/Chemie.oc/glorius/"
+    }
+  },
+  {
+    "name": "Dr. Ajnabiul Hoque",
+    "role": "Postdoctoral Researcher",
+    "image": "https://www.uni-muenster.de/imperia/md/images/organisch_chemisches_institut2/glorius/arbeitsgruppe/fittosize_215_215_9a3898fff0a73e2d7532a47ec2c475e1_ajnabiul_hoque.png",
+    "email": "ajnabiul.hoque@uni-muenster.de",
+    "description": "Postdoctoral researcher working on machine learning-guided reaction discovery and data-driven approaches to organic synthesis.",
+    "links": {
+      "scholar": "https://scholar.google.com/citations?view_op=list_works&hl=de&user=hF7MvWEAAAAJ&hl",
+      "linkedin": "https://www.linkedin.com/in/dr-ajnabiul-hoque-0621b4191/",
+      "orcid": "https://orcid.org/0000-0001-9807-3061"
+    }
+  },
+  {
+    "name": "Dr. Felix Katzenburg",
+    "role": "PhD Researcher",
+    "image": "https://www.uni-muenster.de/imperia/md/images/organisch_chemisches_institut2/glorius/arbeitsgruppe/fittosize_215_215_574272db5603031ec8c72460ee1e151f_felix_katzenburg.png",
+    "email": "felix.katzenburg@uni-muenster.de",
+    "description": "Developer of pyGecko and automated GC data analysis pipelines for high-throughput reaction screening. Evolutionary algorithms for molecular representations.",
+    "links": {
+      "github": "https://github.com/FelixKatz77",
+      "linkedin": "https://www.linkedin.com/in/felix-katzenburg-8900b9225/",
+      "orcid": "https://orcid.org/0000-0003-3053-4911"
+    }
+  },
+  {
+    "name": "Florian Boser",
+    "role": "PhD Researcher",
+    "image": "https://www.uni-muenster.de/imperia/md/images/organisch_chemisches_institut2/glorius/arbeitsgruppe/fittosize_215_215_8592013867345a5387416a4155f3eb10_florian_boser_2.png",
+    "email": "florian.boser@uni-muenster.de",
+    "description": "High-throughput reaction screening, automated data analysis, and data-centric approaches to autonomous chemical discovery.",
+    "links": {
+      "scholar": "https://scholar.google.de/citations?view_op=list_works&hl=de&user=AneRffQAAAAJ&hl",
+      "linkedin": "https://www.linkedin.com/in/florian-boser",
+      "orcid": "https://orcid.org/0000-0003-0550-3822"
+    }
+  },
+  {
+    "name": "Niklas D. Dobberstein",
+    "role": "PhD Researcher",
+    "image": "https://www.uni-muenster.de/imperia/md/images/organisch_chemisches_institut2/glorius/arbeitsgruppe/fittosize_215_215_94cfa1858bb81a218ddc0f97053636dc_niklas_dobberstein.png",
+    "email": "niklas.dobberstein@uni-muenster.de",
+    "description": "Molecular machine learning, interpretable molecular representations, and computational approaches for reaction discovery.",
+    "links": {
+      "scholar": "https://scholar.google.co.uk/citations?hl=en&user=VtmLkn4AAAAJ",
+      "linkedin": "https://www.linkedin.com/in/niklas-dobberstein-425914189/",
+      "orcid": "https://orcid.org/0009-0009-2127-4071"
+    }
+  },
+  {
+    "name": "Niklas Hölter",
+    "role": "PhD Researcher",
+    "image": "https://www.uni-muenster.de/imperia/md/images/organisch_chemisches_institut2/glorius/arbeitsgruppe/fittosize_215_215_6bd3ddcf2b01e9de4a6b1db68a0f86bc_niklas_hoelter.png",
+    "email": "niklas.hoelter@uni-muenster.de",
+    "description": "Standardized substrate selection strategies and data-driven evaluation of reaction generality.",
+    "links": {
+      "linkedin": "https://www.linkedin.com/in/niklas-h%C3%B6lter-96670a225/",
+      "orcid": "https://orcid.org/0009-0006-1433-9277"
+    }
+  },
+  {
+    "name": "Maik Niedziella",
+    "role": "PhD Researcher",
+    "image": "https://www.uni-muenster.de/imperia/md/images/organisch_chemisches_institut2/glorius/arbeitsgruppe/fittosize_215_215_1854b97512279e10a129ec46a4264221_maik_niedziella.png",
+    "email": "m_nied07@uni-muenster.de",
+    "description": "Data science and machine learning applications for organic chemistry reaction optimization.",
+    "links": {
+      "linkedin": "https://www.linkedin.com/in/maik-niedziella-395623212/"
+    }
+  },
+  {
+    "name": "Debanjan Rana",
+    "role": "PhD Researcher",
+    "image": "https://www.uni-muenster.de/imperia/md/images/organisch_chemisches_institut2/glorius/arbeitsgruppe/fittosize_215_215_be9a93f5b5710b7c2fa00e9f1a11d93c_debanjan_rana.png",
+    "email": "debanjan.rana@uni-muenster.de",
+    "description": "Data-driven screening strategies, energy transfer catalysis, and machine learning-guided substrate discovery.",
+    "links": {
+      "linkedin": "http://www.linkedin.com/in/debanjan-rana-101947128/"
+    }
+  },
+  {
+    "name": "Leon Schlosser",
+    "role": "PhD Researcher",
+    "image": "https://www.uni-muenster.de/imperia/md/images/organisch_chemisches_institut2/glorius/arbeitsgruppe/fittosize_215_215_a2ccd06abcd0986e450f4a9ed750b8c5_leon_schlosser.png",
+    "email": "leon.schlosser@uni-muenster.de",
+    "description": "EnTdecker platform development, machine learning for enantioselective organocatalysis, and virtual screening for energy transfer catalysis.",
+    "links": {
+      "orcid": "https://orcid.org/0009-0007-6764-6497"
+    }
+  },
+  {
+    "name": "Jan Spies",
+    "role": "PhD Researcher",
+    "image": "https://www.uni-muenster.de/imperia/md/images/organisch_chemisches_institut2/glorius/arbeitsgruppe/fittosize_215_215_16eeec32ce9e110dce195992b0b999af_jan_spies.png",
+    "email": "j_spie17@uni-muenster.de",
+    "description": "Machine learning approaches for reaction prediction and computational chemistry methods.",
+    "links": {
+      "linkedin": "https://www.linkedin.com/in/jan-spies-b01395241/",
+      "orcid": "https://orcid.org/0009-0005-9793-6319"
+    }
+  },
+  {
+    "name": "Manh Hung Tran",
+    "role": "PhD Researcher",
+    "image": "https://www.uni-muenster.de/imperia/md/images/organisch_chemisches_institut2/glorius/arbeitsgruppe/fittosize_215_215_338d3d982328a262259e5a41f1ff06cf_manh_hung_tran.png",
+    "email": "manh-hung.tran@uni-muenster.de",
+    "description": "Data-driven approaches to organic synthesis and machine learning methods for chemical reactivity.",
+    "links": {
+      "linkedin": "https://www.linkedin.com/in/mhungtran/"
+    }
+  },
+  {
+    "name": "Nick Wierich",
+    "role": "PhD Researcher",
+    "image": "https://www.uni-muenster.de/imperia/md/images/organisch_chemisches_institut2/glorius/arbeitsgruppe/fittosize_215_215_4ad005497ba318bc6d5c23d624fc7b13_nick_wierich.png",
+    "email": "nwierich@uni-muenster.de",
+    "description": "Computational approaches and data science methods for organic chemistry applications.",
+    "links": {
+      "linkedin": "https://www.linkedin.com/in/nick-wierich/"
+    }
+  }
+]

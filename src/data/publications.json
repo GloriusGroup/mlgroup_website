@@ -1,0 +1,92 @@
+[
+  {
+    "title": "Accelerated Discovery of Energy Transfer-Catalyzed Dearomative Cycloadditions through a Data-Driven Three-Layer Screening Strategy",
+    "authors": ["D. Rana", "et al."],
+    "journal": "J. Am. Chem. Soc.",
+    "year": 2025,
+    "volume": "147",
+    "pages": "28359–28361",
+    "doi": "https://doi.org/10.1021/jacs.5c09249",
+    "tags": ["screening", "energy transfer", "data-driven"]
+  },
+  {
+    "title": "Calibration-Free Quantification and Automated Data Analysis for High-Throughput Reaction Screening",
+    "authors": ["F. Katzenburg", "F. Boser", "F. R. Schäfer", "P. M. Pflüger", "F. Glorius"],
+    "journal": "Digit. Discov.",
+    "year": 2025,
+    "volume": "4",
+    "pages": "384–392",
+    "doi": "https://doi.org/10.1039/d4dd00347k",
+    "tags": ["pyGecko", "high-throughput", "automation"]
+  },
+  {
+    "title": "EnTdecker – A Machine Learning-Based Platform for Guiding Substrate Discovery in Energy Transfer Catalysis",
+    "authors": ["L. Schlosser", "D. Rana", "P. M. Pflüger", "F. Katzenburg", "F. Glorius"],
+    "journal": "J. Am. Chem. Soc.",
+    "year": 2024,
+    "volume": "146",
+    "pages": "13266–13275",
+    "doi": "https://doi.org/10.1021/jacs.4c01352",
+    "tags": ["EnTdecker", "machine learning", "virtual screening"]
+  },
+  {
+    "title": "An Evolutionary Algorithm for Interpretable Molecular Representations",
+    "authors": ["P. M. Pflüger", "M. Kühnemund", "F. Katzenburg", "H. Kuchen", "F. Glorius"],
+    "journal": "Chem",
+    "year": 2024,
+    "volume": "10",
+    "pages": "1391–1405",
+    "doi": "https://doi.org/10.1016/j.chempr.2024.02.004",
+    "tags": ["genetic algorithm", "molecular representation", "interpretability"]
+  },
+  {
+    "title": "Standardizing Substrate Selection: A Strategy toward Unbiased Evaluation of Reaction Generality",
+    "authors": ["D. Rana", "P. M. Pflüger", "N. P. Hölter", "G. Tan", "F. Glorius"],
+    "journal": "ACS Cent. Sci.",
+    "year": 2024,
+    "volume": "10",
+    "pages": "899–906",
+    "doi": "https://doi.org/10.1021/acscentsci.3c01638",
+    "tags": ["substrate selection", "data-driven", "standardization"]
+  },
+  {
+    "title": "Catalysing (Organo-)Catalysis: Trends in the Application of Machine Learning to Enantioselective Organocatalysis",
+    "authors": ["L. Schmid", "L. Schlosser", "F. Glorius", "K. Jorner"],
+    "journal": "Beilstein J. Org. Chem.",
+    "year": 2024,
+    "volume": "20",
+    "pages": "2280–2304",
+    "doi": "https://doi.org/10.3762/bjoc.20.196",
+    "tags": ["organocatalysis", "machine learning", "review"]
+  },
+  {
+    "title": "Artificial Intelligence for Retrosynthetic Planning Needs Both Data and Expert Knowledge",
+    "authors": ["F. Strieth-Kalthoff", "S. Szymkuć", "K. Molga", "A. Aspuru-Guzik", "F. Glorius", "B. A. Grzybowski"],
+    "journal": "J. Am. Chem. Soc.",
+    "year": 2024,
+    "volume": "146",
+    "pages": "11005–11017",
+    "doi": "https://doi.org/10.1021/jacs.4c00338",
+    "tags": ["retrosynthesis", "AI", "expert knowledge"]
+  },
+  {
+    "title": "Bridging the Information Gap in Organic Chemical Reactions",
+    "authors": ["M. Schrader", "F. R. Schäfer", "F. Schäfers", "F. Glorius"],
+    "journal": "Nat. Chem.",
+    "year": 2024,
+    "volume": "16",
+    "pages": "491–498",
+    "doi": "https://doi.org/10.1038/s41557-024-01470-8",
+    "tags": ["data generation", "reaction assessment"]
+  },
+  {
+    "title": "Machine Learning for Chemical Reactivity: The Importance of Failed Experiments",
+    "authors": ["F. Strieth-Kalthoff", "F. Sandfort", "M. Kühnemund", "F. R. Schäfer", "H. Kuchen", "F. Glorius"],
+    "journal": "Angew. Chem. Int. Ed.",
+    "year": 2022,
+    "volume": "61",
+    "pages": "e202204647",
+    "doi": "https://doi.org/10.1002/anie.202204647",
+    "tags": ["failed experiments", "negative data", "reactivity"]
+  }
+]

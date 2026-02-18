@@ -1,0 +1,38 @@
+[
+  {
+    "name": "pyGecko",
+    "description": "Open-source Python library for parsing, processing, and analysis of GC-MS and GC-FID raw data. Enables calibration-free quantification and automated analysis of 96-reaction arrays in under a minute.",
+    "url": "https://github.com/FelixKatz77/pyGecko",
+    "language": "Python",
+    "license": "MIT",
+    "tags": ["GC-MS", "GC-FID", "automation", "high-throughput"],
+    "image": "https://github.com/FelixKatz77/pyGecko/blob/main/docs/pyGecko_icon.png?raw=true"
+  },
+  {
+    "name": "PAYN",
+    "description": "Positivity is All You Need — Framework for augmentation of reliable negatives from biased organic datasets. Addresses the challenge of negative data in chemical machine learning.",
+    "url": "https://github.com/GloriusGroup/PAYN",
+    "language": "Python",
+    "license": "MIT",
+    "tags": ["negative data", "augmentation", "machine learning"],
+    "image": "https://github.com/GloriusGroup/PAYN/blob/main/docs/spy_logo.png?raw=true"
+  },
+  {
+    "name": "GPUma",
+    "description": "Minimalistic geometry optimizer for molecules using UMA MLIP models. Supports single structure and batch optimization, both sequential and in parallel batches on GPUs.",
+    "url": "https://github.com/GloriusGroup/gpuma",
+    "language": "Python",
+    "license": "MIT",
+    "tags": ["geometry optimization", "MLIP", "GPU", "molecular"],
+    "image": "https://github.com/GloriusGroup/gpuma/blob/master/docs/logo_bg.png?raw=true"
+  },
+  {
+    "name": "InvEnT",
+    "description": "Inverse photocatalyst design using machine learning. Enables the computational discovery and optimization of photocatalysts for energy transfer catalysis.",
+    "url": "https://github.com/GloriusGroup/InvEnT",
+    "language": "Python",
+    "license": "MIT",
+    "tags": ["photocatalysis", "inverse design", "energy transfer"],
+    "image": "https://github.com/GloriusGroup/InvEnT/blob/main/image.jpg?raw=true"
+  }
+]

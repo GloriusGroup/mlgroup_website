@@ -1,0 +1,22 @@
+[
+  {
+    "title": "Molecular Machine Learning",
+    "description": "Developing novel molecular representations and graph neural networks for predicting chemical reactivity, selectivity, and discovering new reactions through virtual screening.",
+    "icon": "brain"
+  },
+  {
+    "title": "Reaction Assessment",
+    "description": "Smart screening technologies including additive-based robustness screening and condition-based sensitivity screening for systematic reaction evaluation.",
+    "icon": "flask"
+  },
+  {
+    "title": "Accelerated Discovery",
+    "description": "High-throughput experimentation combined with machine learning to accelerate the discovery of new chemical transformations and optimize reaction conditions.",
+    "icon": "rocket"
+  },
+  {
+    "title": "Retrosynthetic AI",
+    "description": "Artificial intelligence approaches for retrosynthetic planning, enabling computer-guided synthesis route design for complex organic molecules.",
+    "icon": "route"
+  }
+]
