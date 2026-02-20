@@ -4,14 +4,14 @@ import { SunIcon, MoonIcon } from "../shared/icons";
 export function Nav({
   isDark,
   onToggle,
-  useAltTheme,
-  onToggleAltTheme,
+  accentName,
+  onCycleAccent,
   devSwitchEnabled,
 }: {
   isDark: boolean;
   onToggle: () => void;
-  useAltTheme: boolean;
-  onToggleAltTheme: () => void;
+  accentName: string;
+  onCycleAccent: () => void;
   devSwitchEnabled: boolean;
 }) {
   const [scrolled, setScrolled] = useState(false);
@@ -54,12 +54,12 @@ export function Nav({
       </ul>
       {devSwitchEnabled && (
         <button
-          className={`dev-switch ${useAltTheme ? "active" : ""}`}
-          onClick={onToggleAltTheme}
-          aria-label="Toggle alternate theme"
+          className={`dev-switch ${accentName !== "Cyan" ? "active" : ""}`}
+          onClick={onCycleAccent}
+          aria-label="Cycle accent color"
         >
           <span className="dev-switch__badge">DEV</span>
-          {useAltTheme ? "Munster" : "Catalyst"}
+          {accentName}
         </button>
       )}
       <button

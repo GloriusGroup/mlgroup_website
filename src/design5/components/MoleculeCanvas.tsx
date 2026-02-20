@@ -101,7 +101,7 @@ interface Particle {
   isNode: boolean;
 }
 
-export function MoleculeCanvas({ isDark, useAltTheme }: { isDark: boolean; useAltTheme: boolean }) {
+export function MoleculeCanvas({ isDark, accentRgb }: { isDark: boolean; accentRgb: string }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const mouseRef = useRef<{ x: number; y: number }>({ x: -9999, y: -9999 });
   const particlesRef = useRef<Particle[]>([]);
@@ -213,10 +213,7 @@ export function MoleculeCanvas({ isDark, useAltTheme }: { isDark: boolean; useAl
       ctx.clearRect(0, 0, w, h);
       const particles = particlesRef.current;
       const mouse = mouseRef.current;
-      // "208, 184, 190"
-      const baseColor = useAltTheme
-        ? (isDark ? "255, 255, 255" : "155, 27, 48")
-        : (isDark ? "34, 211, 238" : "8, 145, 178");
+      const baseColor = accentRgb;
       const nodeAlpha = isDark ? 0.55 : 0.45;
       const dotAlpha = isDark ? 0.4 : 0.3;
       const crossAlpha = isDark ? 0.25 : 0.18;
@@ -350,7 +347,7 @@ export function MoleculeCanvas({ isDark, useAltTheme }: { isDark: boolean; useAl
       window.removeEventListener("mousemove", handleMouseMove);
       document.removeEventListener("mouseleave", handleMouseLeave);
     };
-  }, [isDark, useAltTheme, initParticles]);
+  }, [isDark, accentRgb, initParticles]);
 
   return <canvas ref={canvasRef} id="molecule-canvas" />;
 }

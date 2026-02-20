@@ -67,10 +67,10 @@ interface Particle {
 
 export function ParallaxMoleculeCanvas({
   isDark,
-  useAltTheme,
+  accentRgb,
 }: {
   isDark: boolean;
-  useAltTheme: boolean;
+  accentRgb: string;
 }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const particlesRef = useRef<Particle[]>([]);
@@ -145,9 +145,7 @@ export function ParallaxMoleculeCanvas({
       timeRef.current += 0.006;
       const time = timeRef.current;
 
-      const baseColor = useAltTheme
-        ? (isDark ? "255, 255, 255" : "155, 27, 48")
-        : (isDark ? "34, 211, 238" : "8, 145, 178");
+      const baseColor = accentRgb;
 
       // Pre-compute scroll offsets per layer
       const buf = 80;
@@ -294,7 +292,7 @@ export function ParallaxMoleculeCanvas({
       window.removeEventListener("mousemove", handleMouseMove);
       document.removeEventListener("mouseleave", handleMouseLeave);
     };
-  }, [isDark, useAltTheme]);
+  }, [isDark, accentRgb]);
 
   return <canvas ref={canvasRef} id="molecule-canvas" />;
 }

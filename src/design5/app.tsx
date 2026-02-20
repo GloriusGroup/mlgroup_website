@@ -14,6 +14,7 @@ import { Team } from "./components/Team";
 import { Contact } from "./components/Contact";
 import { Footer } from "./components/Footer";
 import { CookieBanner } from "./components/CookieBanner";
+import { ACCENT_PRESETS } from "./shared/accents";
 
 // Experimental feature flags (URL params)
 const PARALLAX_MODE = true; //new URLSearchParams(window.location.search).get("parallax") === "true";
@@ -26,8 +27,11 @@ let posthogInitialized = false;
 // ---------------------------------------------------------------------------
 function App() {
   const [isDark, setIsDark] = useState(true);
-  const [useAltTheme, setUseAltTheme] = useState(
-    () => localStorage.getItem("alt_theme") === "true"
+  const [accentIndex, setAccentIndex] = useState(
+    () => {
+      const stored = localStorage.getItem("accent_index");
+      return stored ? Math.min(Number(stored), ACCENT_PRESETS.length - 1) : 0;
+    }
   );
   const [devSwitchEnabled, setDevSwitchEnabled] = useState(false);
 
@@ -49,33 +53,55 @@ function App() {
   }, [isDark]);
 
   useEffect(() => {
-    document.documentElement.classList.toggle("alt-theme", useAltTheme);
-    localStorage.setItem("alt_theme", String(useAltTheme));
-  }, [useAltTheme]);
+    const el = document.documentElement;
+    // Remove all accent classes
+    for (const preset of ACCENT_PRESETS) {
+      if (preset.className) el.classList.remove(preset.className);
+    }
+    // Apply current accent class (index 0 = default, no class needed)
+    const current = ACCENT_PRESETS[accentIndex];
+    if (current?.className) el.classList.add(current.className);
+    localStorage.setItem("accent_index", String(accentIndex));
+  }, [accentIndex]);
 
   const toggleTheme = useCallback(() => setIsDark((prev) => !prev), []);
-  const toggleAltTheme = useCallback(() => setUseAltTheme((prev) => !prev), []);
+  const cycleAccent = useCallback(
+    () => setAccentIndex((prev) => (prev + 1) % ACCENT_PRESETS.length),
+    []
+  );
+
+  // useEffect(() => {
+  // // Set up the interval
+  // const interval = setInterval(() => {
+  //   cycleAccent();
+  // }, 100); // 1000ms = 1 second
+
+  // // CLEANUP: This is crucial. It clears the timer if the 
+  // // component unmounts to prevent memory leaks and crashes.
+  // return () => clearInterval(interval);
+  // }, [cycleAccent]);
+
 
   return (
     <>
       {PARALLAX_MODE ? (
-        <ParallaxMoleculeCanvas isDark={isDark} useAltTheme={useAltTheme} />
+        <ParallaxMoleculeCanvas isDark={isDark} accentRgb={isDark ? ACCENT_PRESETS[accentIndex]!.rgb : ACCENT_PRESETS[accentIndex]!.rgbLight} />
       ) : (
-        <MoleculeCanvas isDark={isDark} useAltTheme={useAltTheme} />
+        <MoleculeCanvas isDark={isDark} accentRgb={isDark ? ACCENT_PRESETS[accentIndex]!.rgb : ACCENT_PRESETS[accentIndex]!.rgbLight} />
       )}
       <div className="content-layer">
         <Nav
           isDark={isDark}
           onToggle={toggleTheme}
-          useAltTheme={useAltTheme}
-          onToggleAltTheme={toggleAltTheme}
+          accentName={ACCENT_PRESETS[accentIndex]!.name}
+          onCycleAccent={cycleAccent}
           devSwitchEnabled={devSwitchEnabled}
         />
         <main id="main-content">
           <Hero />
           <Projects />
           <Publications />
-          <Team useAltTheme={useAltTheme} />
+          <Team useAltTheme={accentIndex !== 0} />
           <Contact />
         </main>
         <Footer />
