@@ -165,7 +165,9 @@ export function MoleculeCanvas({ isDark, accentRgb }: { isDark: boolean; accentR
         }
       }
     } else {
-      const count = FRANK_MODE ? 45 : 65;
+      const scale = Math.min(1, (w * h) / (1920 * 1080));
+      const baseCount = FRANK_MODE ? 45 : 65;
+      const count = Math.max(8, Math.round(baseCount * scale));
       for (let i = 0; i < count; i++) {
         particles.push({
           x: Math.random() * w,

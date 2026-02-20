@@ -87,11 +87,14 @@ export function ParallaxMoleculeCanvas({
 
     const initParticles = (w: number, h: number) => {
       const particles: Particle[] = [];
+      // Scale particle count by screen area (counts tuned for ~1920×1080)
+      const scale = Math.min(1, (w * h) / (1920 * 1080));
       for (let li = 0; li < LAYERS.length; li++) {
         const cfg = LAYERS[li]!;
+        const count = Math.max(3, Math.round(cfg.count * scale));
         const [sMin, sMax] = cfg.sizeRange;
         const [aMin, aMax] = cfg.alphaRange;
-        for (let i = 0; i < cfg.count; i++) {
+        for (let i = 0; i < count; i++) {
           particles.push({
             x: Math.random() * w,
             y: Math.random() * h,
@@ -99,7 +102,7 @@ export function ParallaxMoleculeCanvas({
             vy: (Math.random() - 0.5) * cfg.drift * 2,
             r: sMin + Math.random() * (sMax - sMin),
             alpha: aMin + Math.random() * (aMax - aMin),
-            isNode: i < cfg.count * cfg.nodeRatio,
+            isNode: i < count * cfg.nodeRatio,
             layer: li,
             idx: i,
             phase: Math.random() * Math.PI * 2,
