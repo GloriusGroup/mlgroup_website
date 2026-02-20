@@ -2,8 +2,10 @@
 
 Website for the **Data Science Subgroup** of the [Glorius Lab](https://www.uni-muenster.de/Chemie.oc/glorius/) at the Organisch-Chemisches Institut, University of Munster. The group focuses on machine learning, data-driven approaches, and computational methods applied to organic chemistry.
 
-<img src="./src/data/emu.svg" alt="Animated Emu" width="100%" />
-
+<!-- <img src="./src/data/emu.svg" alt="Animated Emu" width="50%"  /> -->
+<p align="center">
+  <img src="src/data/emu.svg" width="800" alt="Running Emu" />
+</p>
 
 
 ## Tech Stack
