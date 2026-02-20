@@ -1,7 +1,8 @@
 {
   "permissions": {
     "allow": [
-      "WebFetch(domain:www.uni-muenster.de)"
+      "WebFetch(domain:www.uni-muenster.de)",
+      "mcp__ide__getDiagnostics"
     ]
   }
 }

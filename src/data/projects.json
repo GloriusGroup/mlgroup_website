@@ -2,11 +2,11 @@
   {
     "name": "pyGecko",
     "description": "Open-source Python library for parsing, processing, and analysis of GC-MS and GC-FID raw data. Enables calibration-free quantification and automated analysis of 96-reaction arrays in under a minute.",
-    "url": "https://github.com/FelixKatz77/pyGecko",
+    "url": "https://github.com/GloriusGroup/pyGecko",
     "language": "Python",
     "license": "MIT",
     "tags": ["GC-MS", "GC-FID", "automation", "high-throughput"],
-    "image": "https://github.com/FelixKatz77/pyGecko/blob/main/docs/pyGecko_icon.png?raw=true"
+    "image": "https://github.com/GloriusGroup/pyGecko/blob/main/docs/pyGecko_icon.png?raw=true"
   },
   {
     "name": "PAYN",
@@ -34,5 +34,23 @@
     "license": "MIT",
     "tags": ["photocatalysis", "inverse design", "energy transfer"],
     "image": "https://github.com/GloriusGroup/InvEnT/blob/main/image.jpg?raw=true"
+  },
+   {
+    "name": "EnTdecker",
+    "description": "EnTdecker – A Machine Learning-Based Platform for Guiding Substrate Discovery in Energy Transfer Catalysis.",
+    "url": "https://github.com/GloriusGroup/EnTdecker",
+    "language": "Python",
+    "license": "MIT",
+    "tags": ["photocatalysis", "inverse design", "energy transfer"],
+    "image": "https://github.com/GloriusGroup/EnTdecker/blob/main/images/TOC.png?raw=true"
+  },
+  {
+    "name": "EasyChemML",
+    "description": "EasyChem-ML is a modular structure-based machine learning tool for property, reactivity and structure prediction in (organic) chemistry.",
+    "url": "https://github.com/GloriusGroup/EasyChemML",
+    "language": "Python",
+    "license": "MIT",
+    "tags": ["machine learning", "chemistry", "property prediction"],
+    "image": "https://ars.els-cdn.com/content/image/1-s2.0-S2451929420300851-fx1.jpg"
   }
 ]
