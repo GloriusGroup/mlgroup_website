@@ -491,6 +491,17 @@ button:focus-visible {
   color: var(--bg);
 }
 
+.hero__btn--github {
+  background: var(--accent);
+  color: var(--bg);
+  border-color: var(--accent);
+}
+
+.hero__btn--github:hover {
+  background: transparent;
+  color: var(--accent);
+}
+
 /* ---------- Section Base ---------- */
 .section {
   padding: 3.5rem 2rem;
@@ -697,6 +708,9 @@ button:focus-visible {
   gap: 1.5rem;
   align-items: flex-start;
   transition: all var(--transition);
+  text-decoration: none;
+  color: inherit;
+  cursor: pointer;
 }
 
 .pub-card:hover {

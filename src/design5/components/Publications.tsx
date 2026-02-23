@@ -17,9 +17,12 @@ export function Publications() {
       </div>
       <div className="publications-list">
         {pubs.map((pub, i) => (
-          <div
+          <a
             className={`pub-card reveal reveal-delay-${Math.min(i + 1, 10)}`}
             key={pub.title}
+            href={pub.doi || undefined}
+            target="_blank"
+            rel="noopener noreferrer"
           >
             <div className="pub-card__year">{pub.year}</div>
             <div className="pub-card__body">
@@ -32,14 +35,9 @@ export function Publications() {
               </div>
               <div className="pub-card__footer">
                 {pub.doi && (
-                  <a
-                    className="pub-card__doi"
-                    href={pub.doi}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                  >
+                  <span className="pub-card__doi">
                     DOI &rarr;
-                  </a>
+                  </span>
                 )}
                 {pub.tags.map((tag) => (
                   <span className="pub-card__tag" key={tag}>
@@ -48,7 +46,7 @@ export function Publications() {
                 ))}
               </div>
             </div>
-          </div>
+          </a>
         ))}
       </div>
     </section>

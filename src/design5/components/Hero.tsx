@@ -25,11 +25,11 @@ export function Hero() {
         </a>
         <a
           href="https://github.com/GloriusGroup"
-          className="hero__btn"
+          className="hero__btn hero__btn--github"
           target="_blank"
           rel="noopener noreferrer"
         >
-          GitHub
+          GitHub &#8599;
         </a>
       </div>
     </section>
