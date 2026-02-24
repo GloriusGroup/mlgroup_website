@@ -227,11 +227,12 @@ export function ParallaxMoleculeCanvas({
         p.x += p.vx;
         p.y += p.vy;
 
-        // Wrap base positions (generous boundary to prevent pop-in)
+        // Wrap base positions — X wraps independently, Y must match wrapH
+        // so the modulo in renderedY stays continuous across the seam
         if (p.x < -50) p.x += w + 100;
         if (p.x > w + 50) p.x -= w + 100;
-        if (p.y < -50) p.y += h + 100;
-        if (p.y > h + 50) p.y -= h + 100;
+        if (p.y < -buf) p.y += wrapH;
+        if (p.y > h + buf) p.y -= wrapH;
       }
 
       // --- Render layers far → near (painter's order) ---
