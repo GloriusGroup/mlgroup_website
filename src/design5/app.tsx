@@ -11,6 +11,7 @@ import { Hero } from "./components/Hero";
 import { Projects } from "./components/Projects";
 import { Publications } from "./components/Publications";
 import { Team } from "./components/Team";
+import { Funding } from "./components/Funding";
 import { Contact } from "./components/Contact";
 import { Footer } from "./components/Footer";
 import { CookieBanner } from "./components/CookieBanner";
@@ -102,6 +103,7 @@ function App() {
           <Projects />
           <Publications />
           <Team useAltTheme={accentIndex !== 0} />
+          <Funding />
           <Contact />
         </main>
         <Footer />

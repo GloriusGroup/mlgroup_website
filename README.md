@@ -4,7 +4,7 @@ Website for the **Data Science Subgroup** of the [Glorius Lab](https://www.uni-m
 
 <!-- <img src="./src/data/emu.svg" alt="Animated Emu" width="50%"  /> -->
 <p align="center">
-  <img src="src/data/emu.gif" width="300" alt="Running Emu" />
+  <img src="src/data/emu.svg" width="300" alt="Running Emu" />
 </p>
 
 

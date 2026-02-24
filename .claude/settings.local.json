@@ -3,7 +3,14 @@
     "allow": [
       "WebFetch(domain:www.uni-muenster.de)",
       "mcp__ide__getDiagnostics",
-      "Bash(bunx tsc:*)"
+      "Bash(bunx tsc:*)",
+      "WebFetch(domain:scholar.google.com)",
+      "WebFetch(domain:scholar.google.de)",
+      "WebFetch(domain:scholar.google.co.uk)",
+      "WebSearch",
+      "WebFetch(domain:link.springer.com)",
+      "WebFetch(domain:arxiv.org)",
+      "WebFetch(domain:www.chemeurope.com)"
     ]
   }
 }
