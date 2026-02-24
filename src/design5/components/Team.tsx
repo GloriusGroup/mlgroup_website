@@ -4,9 +4,18 @@ import { EmailIcon, linkIconMap } from "../shared/icons";
 import { getInitials, getAvatarGradient } from "../shared/utils";
 import type { Member } from "../shared/types";
 import membersData from "../../data/members.json";
+import { memberImages } from "../../data/assets/members";
+
+/** Resolve an image field: local filename → bundled URL, or pass through full URLs */
+function resolveImage(image: string | undefined): string | undefined {
+  if (!image || !image.trim()) return undefined;
+  if (image.startsWith("http://") || image.startsWith("https://")) return image;
+  return memberImages[image] ?? undefined;
+}
 
 function TeamCard({ member, index, useAltTheme }: { member: Member; index: number; useAltTheme: boolean }) {
-  const hasImage = member.image && member.image.trim() !== "";
+  const resolvedImage = resolveImage(member.image);
+  const hasImage = !!resolvedImage;
 
   return (
     <div
@@ -19,7 +28,7 @@ function TeamCard({ member, index, useAltTheme }: { member: Member; index: numbe
         }
       >
         {hasImage ? (
-          <img src={member.image} alt={member.name} />
+          <img src={resolvedImage} alt={member.name} />
         ) : (
           getInitials(member.name)
         )}

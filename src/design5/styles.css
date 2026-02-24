@@ -160,14 +160,33 @@ body {
   line-height: 1.7;
   color: var(--text);
   background-color: var(--bg);
-  background-image:
-    linear-gradient(var(--grid-color) 1px, transparent 1px),
-    linear-gradient(90deg, var(--grid-color) 1px, transparent 1px);
-  background-size: 40px 40px;
   overflow-x: hidden;
   transition: background-color var(--transition), color var(--transition);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+}
+
+/* ---------- Background Modes (feature flag) ---------- */
+
+/* Grid — original subtle graph paper */
+.bg-grid body {
+  background-image:
+    linear-gradient(var(--grid-color) 1px, transparent 1px),
+    linear-gradient(90deg, var(--grid-color) 1px, transparent 1px);
+  background-size: 40px 40px;
+}
+
+/* Circuit — rendered via BinaryBackground canvas component, no CSS needed */
+
+/* Dots — minimal dot grid */
+.bg-dots body {
+  background-image: radial-gradient(circle, rgba(var(--accent-rgb), 0.08) 1px, transparent 1px);
+  background-size: 24px 24px;
+}
+
+/* None — clean solid background */
+.bg-none body {
+  background-image: none;
 }
 
 /* ---------- Typography ---------- */

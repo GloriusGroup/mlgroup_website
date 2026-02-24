@@ -10,7 +10,8 @@
       "WebSearch",
       "WebFetch(domain:link.springer.com)",
       "WebFetch(domain:arxiv.org)",
-      "WebFetch(domain:www.chemeurope.com)"
+      "WebFetch(domain:www.chemeurope.com)",
+      "WebFetch(domain:molecularmachinelearning.com)"
     ]
   }
 }

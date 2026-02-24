@@ -12,7 +12,8 @@
     "@posthog/react": "^1.8.0",
     "posthog-js": "^1.350.0",
     "react": "^19",
-    "react-dom": "^19"
+    "react-dom": "^19",
+    "tscircuit": "^0.0.1363"
   },
   "devDependencies": {
     "@types/react": "^19",

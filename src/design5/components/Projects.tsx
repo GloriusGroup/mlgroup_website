@@ -3,6 +3,16 @@ import { useScrollReveal } from "../shared/hooks";
 import { ExternalLinkIcon } from "../shared/icons";
 import type { Project } from "../shared/types";
 import projectsData from "../../data/projects.json";
+import { projectImages } from "../../data/assets/projects";
+
+/** Resolve an image field: local filename → bundled URL, or pass through full URLs */
+function resolveImage(image: string | undefined): string | undefined {
+  if (!image) return undefined;
+  // If it's a full URL, use it directly
+  if (image.startsWith("http://") || image.startsWith("https://")) return image;
+  // Otherwise look up the local filename in the static import map
+  return projectImages[image] ?? undefined;
+}
 
 export function Projects() {
   const ref = useScrollReveal();
@@ -30,7 +40,7 @@ export function Projects() {
               <ExternalLinkIcon />
             </div>
 
-            {proj.image && (
+            {resolveImage(proj.image) && (
               <div
                 className="project-card__image-wrapper"
                 style={{
@@ -44,7 +54,7 @@ export function Projects() {
                 }}
               >
                 <img
-                  src={proj.image}
+                  src={resolveImage(proj.image)}
                   alt={proj.name}
                   style={{
                     width: "100%",

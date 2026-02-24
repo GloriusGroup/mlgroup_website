@@ -1,10 +1,13 @@
 import React, { useEffect, useRef, useCallback } from "react";
-import frankHead from "../../data/frank.png";
+import { memberImages, memberCodes } from "../../data/assets/members";
 
-// Easter egg flags
-const FRANK_MODE = new URLSearchParams(window.location.search).get("frank_mode") === "true";
-const FRANK_IMG_URL = frankHead;
 const MOLECULE_MODE = new URLSearchParams(window.location.search).get("molecule_mode") === "true";
+
+// Easter egg: ?member=NDO → particles become that member's face (3-letter codes)
+const MEMBER_MODE_PARAM = new URLSearchParams(window.location.search).get("member")?.toUpperCase() ?? null;
+const MEMBER_IMG_URL = MEMBER_MODE_PARAM
+  ? memberCodes[MEMBER_MODE_PARAM] ?? memberImages[MEMBER_MODE_PARAM] ?? null
+  : null;
 
 interface MoleculeShape {
   name: string;
@@ -106,20 +109,17 @@ export function MoleculeCanvas({ isDark, accentRgb }: { isDark: boolean; accentR
   const mouseRef = useRef<{ x: number; y: number }>({ x: -9999, y: -9999 });
   const particlesRef = useRef<Particle[]>([]);
   const animationRef = useRef<number>(0);
-  const frankImgRef = useRef<HTMLImageElement | null>(null);
-  const frankLoadedRef = useRef(false);
+  const memberImgRef = useRef<HTMLImageElement | null>(null);
+  const memberLoadedRef = useRef(false);
 
   useEffect(() => {
-    if (!FRANK_MODE) return;
+    if (!MEMBER_IMG_URL) return;
     const img = new Image();
     img.onload = () => {
-      frankImgRef.current = img;
-      frankLoadedRef.current = true;
+      memberImgRef.current = img;
+      memberLoadedRef.current = true;
     };
-    img.onerror = (e) => {
-      console.error("Frank Mode: Failed to load image.", e);
-    };
-    img.src = FRANK_IMG_URL;
+    img.src = MEMBER_IMG_URL;
   }, []);
 
   const initParticles = useCallback((w: number, h: number) => {
@@ -166,7 +166,7 @@ export function MoleculeCanvas({ isDark, accentRgb }: { isDark: boolean; accentR
       }
     } else {
       const scale = Math.min(1, (w * h) / (1920 * 1080));
-      const baseCount = FRANK_MODE ? 45 : 65;
+      const baseCount = MEMBER_IMG_URL ? 45 : 65;
       const count = Math.max(8, Math.round(baseCount * scale));
       for (let i = 0; i < count; i++) {
         particles.push({
@@ -174,7 +174,7 @@ export function MoleculeCanvas({ isDark, accentRgb }: { isDark: boolean; accentR
           y: Math.random() * h,
           vx: (Math.random() - 0.5) * 0.4,
           vy: (Math.random() - 0.5) * 0.4,
-          r: FRANK_MODE ? 15 + Math.random() * 15 : 5.0 + Math.random() * 3.5,
+          r: MEMBER_IMG_URL ? 15 + Math.random() * 15 : 5.0 + Math.random() * 3.5,
           isNode: i % 5 === 0,
         });
       }
@@ -244,7 +244,7 @@ export function MoleculeCanvas({ isDark, accentRgb }: { isDark: boolean; accentR
         const dx = p.x - mouse.x;
         const dy = p.y - mouse.y;
         const dist = Math.sqrt(dx * dx + dy * dy);
-        const repelRadius = FRANK_MODE ? 250 : 160;
+        const repelRadius = MEMBER_IMG_URL ? 250 : 160;
 
         if (dist < repelRadius && dist > 0) {
           const force = (repelRadius - dist) / repelRadius;
@@ -286,8 +286,8 @@ export function MoleculeCanvas({ isDark, accentRgb }: { isDark: boolean; accentR
         }
       }
 
-      if (FRANK_MODE && frankLoadedRef.current && frankImgRef.current) {
-        const img = frankImgRef.current;
+      if (MEMBER_IMG_URL && memberLoadedRef.current && memberImgRef.current) {
+        const img = memberImgRef.current;
         const minDim = Math.min(img.width, img.height);
         const sx = (img.width - minDim) / 2;
         const sy = (img.height - minDim) / 2;

@@ -4,6 +4,7 @@ import posthog from "posthog-js";
 import { PostHogProvider } from "posthog-js/react";
 import "./styles.css";
 
+import { CircuitBackground } from "./components/CircuitBackground";
 import { MoleculeCanvas } from "./components/MoleculeCanvas";
 import { ParallaxMoleculeCanvas } from "./components/ParallaxMoleculeCanvas";
 import { Nav } from "./components/Nav";
@@ -19,6 +20,9 @@ import { ACCENT_PRESETS } from "./shared/accents";
 
 // Experimental feature flags (URL params)
 const PARALLAX_MODE = true; //new URLSearchParams(window.location.search).get("parallax") === "true";
+
+// Background mode: "grid" (default), "circuit", "dots", "none"
+const BG_MODE: "grid" | "circuit" | "dots" | "none" = "grid";
 
 // Set after successful posthog.init()
 let posthogInitialized = false;
@@ -43,6 +47,13 @@ function App() {
         setDevSwitchEnabled(themeSwitch);
       })
       .catch(() => {});
+  }, []);
+
+  useEffect(() => {
+    const el = document.documentElement;
+    // Apply background mode class
+    el.classList.remove("bg-grid", "bg-circuit", "bg-dots", "bg-none");
+    el.classList.add(`bg-${BG_MODE}`);
   }, []);
 
   useEffect(() => {
@@ -83,12 +94,17 @@ function App() {
   // }, [cycleAccent]);
 
 
+  const currentAccentRgb = isDark ? ACCENT_PRESETS[accentIndex]!.rgb : ACCENT_PRESETS[accentIndex]!.rgbLight;
+
   return (
     <>
+      {BG_MODE === "circuit" && (
+        <CircuitBackground isDark={isDark} accentRgb={currentAccentRgb} />
+      )}
       {PARALLAX_MODE ? (
-        <ParallaxMoleculeCanvas isDark={isDark} accentRgb={isDark ? ACCENT_PRESETS[accentIndex]!.rgb : ACCENT_PRESETS[accentIndex]!.rgbLight} />
+        <ParallaxMoleculeCanvas isDark={isDark} accentRgb={currentAccentRgb} />
       ) : (
-        <MoleculeCanvas isDark={isDark} accentRgb={isDark ? ACCENT_PRESETS[accentIndex]!.rgb : ACCENT_PRESETS[accentIndex]!.rgbLight} />
+        <MoleculeCanvas isDark={isDark} accentRgb={currentAccentRgb} />
       )}
       <div className="content-layer">
         <Nav

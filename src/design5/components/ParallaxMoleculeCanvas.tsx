@@ -1,4 +1,11 @@
 import React, { useEffect, useRef } from "react";
+import { memberImages, memberCodes } from "../../data/assets/members";
+
+// Easter egg: ?member=NDO → particles become that member's face (3-letter codes)
+const MEMBER_MODE_PARAM = new URLSearchParams(window.location.search).get("member")?.toUpperCase() ?? null;
+const MEMBER_IMG_URL = MEMBER_MODE_PARAM
+  ? memberCodes[MEMBER_MODE_PARAM] ?? memberImages[MEMBER_MODE_PARAM] ?? null
+  : null;
 
 // ---------------------------------------------------------------------------
 // Depth layers — each represents a plane at a different "distance"
@@ -78,6 +85,18 @@ export function ParallaxMoleculeCanvas({
   const scrollRef = useRef(0);
   const mouseRef = useRef({ x: -9999, y: -9999 });
   const timeRef = useRef(0);
+  const memberImgRef = useRef<HTMLImageElement | null>(null);
+  const memberLoadedRef = useRef(false);
+
+  useEffect(() => {
+    if (!MEMBER_IMG_URL) return;
+    const img = new Image();
+    img.onload = () => {
+      memberImgRef.current = img;
+      memberLoadedRef.current = true;
+    };
+    img.src = MEMBER_IMG_URL;
+  }, []);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -95,12 +114,13 @@ export function ParallaxMoleculeCanvas({
         const [sMin, sMax] = cfg.sizeRange;
         const [aMin, aMax] = cfg.alphaRange;
         for (let i = 0; i < count; i++) {
+          const memberScale = MEMBER_IMG_URL ? 2.5 : 1;
           particles.push({
             x: Math.random() * w,
             y: Math.random() * h,
             vx: (Math.random() - 0.5) * cfg.drift * 2,
             vy: (Math.random() - 0.5) * cfg.drift * 2,
-            r: sMin + Math.random() * (sMax - sMin),
+            r: (sMin + Math.random() * (sMax - sMin)) * memberScale,
             alpha: aMin + Math.random() * (aMax - aMin),
             isNode: i < count * cfg.nodeRatio,
             layer: li,
@@ -191,8 +211,9 @@ export function ParallaxMoleculeCanvas({
           const dx = p.x - mouse.x;
           const dy = ry - mouse.y;
           const dist = Math.sqrt(dx * dx + dy * dy);
-          if (dist < 160 && dist > 0) {
-            const force = (160 - dist) / 160;
+          const repelR = MEMBER_IMG_URL ? 250 : 160;
+          if (dist < repelR && dist > 0) {
+            const force = (repelR - dist) / repelR;
             p.vx += (dx / dist) * force * 0.2;
             p.vy += (dy / dist) * force * 0.2;
           }
@@ -247,38 +268,61 @@ export function ParallaxMoleculeCanvas({
         }
 
         // Particles
+        const useMemberImg = MEMBER_IMG_URL && memberLoadedRef.current && memberImgRef.current;
         for (const { px, py, p } of rendered) {
           if (px < -20 || px > w + 20 || py < -20 || py > h + 20) continue;
 
           const breathe = Math.sin(time * 1.8 + p.phase) * 0.05;
           const a = Math.max(0, p.alpha + breathe);
 
-          // Dot
-          ctx.beginPath();
-          ctx.arc(px, py, p.r, 0, Math.PI * 2);
-          ctx.fillStyle = `rgba(${baseColor}, ${a})`;
-          ctx.fill();
+          if (useMemberImg) {
+            const img = memberImgRef.current!;
+            const minDim = Math.min(img.width, img.height);
+            const sx = (img.width - minDim) / 2;
+            const sy = (img.height - minDim) / 2;
+            const size = p.r * 2;
 
-          // Node ring
-          if (p.isNode) {
+            ctx.save();
+            ctx.globalAlpha = a * 1.8;
             ctx.beginPath();
-            ctx.arc(px, py, p.r + 5, 0, Math.PI * 2);
-            ctx.strokeStyle = `rgba(${baseColor}, ${a * 0.3})`;
+            ctx.arc(px, py, p.r, 0, Math.PI * 2);
+            ctx.clip();
+            ctx.drawImage(img, sx, sy, minDim, minDim, px - p.r, py - p.r, size, size);
+            ctx.restore();
+
+            ctx.beginPath();
+            ctx.arc(px, py, p.r + 2, 0, Math.PI * 2);
+            ctx.strokeStyle = `rgba(${baseColor}, ${a * 0.6})`;
             ctx.lineWidth = 0.5;
             ctx.stroke();
-          }
-
-          // Cross markers (same pattern as original: every 7th particle)
-          if (p.idx % 7 === 0) {
-            const s = 6;
+          } else {
+            // Dot
             ctx.beginPath();
-            ctx.moveTo(px - s, py);
-            ctx.lineTo(px + s, py);
-            ctx.moveTo(px, py - s);
-            ctx.lineTo(px, py + s);
-            ctx.strokeStyle = `rgba(${baseColor}, ${a * 0.4})`;
-            ctx.lineWidth = 0.5;
-            ctx.stroke();
+            ctx.arc(px, py, p.r, 0, Math.PI * 2);
+            ctx.fillStyle = `rgba(${baseColor}, ${a})`;
+            ctx.fill();
+
+            // Node ring
+            if (p.isNode) {
+              ctx.beginPath();
+              ctx.arc(px, py, p.r + 5, 0, Math.PI * 2);
+              ctx.strokeStyle = `rgba(${baseColor}, ${a * 0.3})`;
+              ctx.lineWidth = 0.5;
+              ctx.stroke();
+            }
+
+            // Cross markers (same pattern as original: every 7th particle)
+            if (p.idx % 7 === 0) {
+              const s = 6;
+              ctx.beginPath();
+              ctx.moveTo(px - s, py);
+              ctx.lineTo(px + s, py);
+              ctx.moveTo(px, py - s);
+              ctx.lineTo(px, py + s);
+              ctx.strokeStyle = `rgba(${baseColor}, ${a * 0.4})`;
+              ctx.lineWidth = 0.5;
+              ctx.stroke();
+            }
           }
         }
       }

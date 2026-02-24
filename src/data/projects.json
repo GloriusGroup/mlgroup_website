@@ -6,7 +6,7 @@
     "language": "Python",
     "license": "MIT",
     "tags": ["GC-MS", "GC-FID", "automation", "high-throughput"],
-    "image": "https://github.com/GloriusGroup/pyGecko/blob/main/docs/pyGecko_icon.png?raw=true"
+    "image": "pygecko.png"
   },
   {
     "name": "PAYN",
@@ -15,7 +15,7 @@
     "language": "Python",
     "license": "MIT",
     "tags": ["negative data", "augmentation", "machine learning"],
-    "image": "https://github.com/GloriusGroup/PAYN/blob/main/docs/spy_logo.png?raw=true"
+    "image": "payn.png"
   },
   {
     "name": "GPUma",
@@ -24,7 +24,7 @@
     "language": "Python",
     "license": "MIT",
     "tags": ["geometry optimization", "MLIP", "GPU", "molecular"],
-    "image": "https://github.com/GloriusGroup/gpuma/blob/master/docs/logo_bg.png?raw=true"
+    "image": "gpuma.png"
   },
   {
     "name": "InvEnT",
@@ -33,16 +33,25 @@
     "language": "Python",
     "license": "MIT",
     "tags": ["photocatalysis", "inverse design", "energy transfer"],
-    "image": "https://github.com/GloriusGroup/InvEnT/blob/main/image.jpg?raw=true"
+    "image": "invent.jpg"
   },
-   {
+  {
     "name": "EnTdecker",
     "description": "EnTdecker – A Machine Learning-Based Platform for Guiding Substrate Discovery in Energy Transfer Catalysis.",
     "url": "https://github.com/GloriusGroup/EnTdecker",
     "language": "Python",
     "license": "MIT",
     "tags": ["photocatalysis", "inverse design", "energy transfer"],
-    "image": "https://github.com/GloriusGroup/EnTdecker/blob/main/images/TOC.png?raw=true"
+    "image": "entdecker.png"
+  },
+  {
+    "url": "https://github.com/GloriusGroup/standardizing-substrate-selection",
+    "name": "Standardizing Substrate Selection",
+    "description": "Standardizing Substrate Selection: A Strategy toward Unbiased Evaluation of Reaction Generality.",
+    "language": "Python",
+    "license": "MIT",
+    "tags": ["substrate selection", "reaction generality", "machine learning"],
+    "image": "substrate_selection.jpeg"
   },
   {
     "name": "EasyChemML",
@@ -51,6 +60,6 @@
     "language": "Python",
     "license": "MIT",
     "tags": ["machine learning", "chemistry", "property prediction"],
-    "image": "https://ars.els-cdn.com/content/image/1-s2.0-S2451929420300851-fx1.jpg"
+    "image": "easychml.jpg"
   }
 ]
