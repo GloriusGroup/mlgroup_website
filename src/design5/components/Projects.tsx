@@ -1,6 +1,6 @@
 import React from "react";
 import { useScrollReveal } from "../shared/hooks";
-import { ExternalLinkIcon } from "../shared/icons";
+import { ExternalLinkIcon, WebsiteIcon } from "../shared/icons";
 import type { Project } from "../shared/types";
 import projectsData from "../../data/projects.json";
 import { projectImages } from "../../data/assets/projects";
@@ -26,19 +26,22 @@ export function Projects() {
       </div>
       <div className="project-grid">
         {projects.map((proj, i) => (
-          <a
+          <div
             className={`project-card reveal reveal-delay-${i + 1}`}
             key={proj.name}
-            href={proj.url}
-            target="_blank"
-            rel="noopener noreferrer"
           >
-            <div className="project-card__header">
+            <a
+              className="project-card__header"
+              href={proj.url}
+              target="_blank"
+              rel="noopener noreferrer"
+              style={{ textDecoration: "none", color: "inherit" }}
+            >
               <h3 className="project-card__name" style={{ marginLeft: 0 }}>
                 {proj.name}
               </h3>
               <ExternalLinkIcon />
-            </div>
+            </a>
 
             {resolveImage(proj.image) && (
               <div
@@ -79,7 +82,43 @@ export function Projects() {
                 <span className="project-card__tag" key={tag}>{tag}</span>
               ))}
             </div>
-          </a>
+            {proj.website && (
+              <a
+                href={proj.website}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="project-card__website"
+                style={{
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: "0.4rem",
+                  marginTop: "0.75rem",
+                  padding: "0.35rem 0.75rem",
+                  borderRadius: "6px",
+                  border: "1px solid var(--accent)",
+                  color: "var(--accent)",
+                  fontSize: "0.82rem",
+                  fontWeight: 500,
+                  textDecoration: "none",
+                  alignSelf: "flex-start",
+                  transition: "background 0.2s, color 0.2s",
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.background = "var(--accent)";
+                  e.currentTarget.style.color = "#fff";
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.background = "transparent";
+                  e.currentTarget.style.color = "var(--accent)";
+                }}
+              >
+                <span style={{ width: "14px", height: "14px", display: "inline-flex" }}>
+                  <WebsiteIcon />
+                </span>
+                Visit Website
+              </a>
+            )}
+          </div>
         ))}
       </div>
     </section>

@@ -11,6 +11,7 @@ export interface Project {
   name: string;
   description: string;
   url: string;
+  website?: string;
   language: string;
   license: string;
   tags: string[];

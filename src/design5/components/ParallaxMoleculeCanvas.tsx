@@ -1,11 +1,16 @@
 import React, { useEffect, useRef } from "react";
-import { memberImages, memberCodes } from "../../data/assets/members";
+import { memberImages, memberCodes, allMemberUrls } from "../../data/assets/members";
 
 // Easter egg: ?member=NDO → particles become that member's face (3-letter codes)
+// ?member=ALL → each particle gets a random member, equally distributed
 const MEMBER_MODE_PARAM = new URLSearchParams(window.location.search).get("member")?.toUpperCase() ?? null;
-const MEMBER_IMG_URL = MEMBER_MODE_PARAM
-  ? memberCodes[MEMBER_MODE_PARAM] ?? memberImages[MEMBER_MODE_PARAM] ?? null
-  : null;
+const ALL_MODE = MEMBER_MODE_PARAM === "ALL";
+const MEMBER_IMG_URL = ALL_MODE
+  ? null
+  : MEMBER_MODE_PARAM
+    ? memberCodes[MEMBER_MODE_PARAM] ?? memberImages[MEMBER_MODE_PARAM] ?? null
+    : null;
+const MEMBER_MODE = ALL_MODE || !!MEMBER_IMG_URL;
 
 // ---------------------------------------------------------------------------
 // Depth layers — each represents a plane at a different "distance"
@@ -70,6 +75,7 @@ interface Particle {
   layer: number;
   idx: number;
   phase: number;
+  memberImgIdx: number;
 }
 
 export function ParallaxMoleculeCanvas({
@@ -87,15 +93,33 @@ export function ParallaxMoleculeCanvas({
   const timeRef = useRef(0);
   const memberImgRef = useRef<HTMLImageElement | null>(null);
   const memberLoadedRef = useRef(false);
+  const allImgsRef = useRef<HTMLImageElement[]>([]);
+  const allImgsLoadedRef = useRef(false);
 
   useEffect(() => {
-    if (!MEMBER_IMG_URL) return;
-    const img = new Image();
-    img.onload = () => {
-      memberImgRef.current = img;
-      memberLoadedRef.current = true;
-    };
-    img.src = MEMBER_IMG_URL;
+    if (ALL_MODE) {
+      let loaded = 0;
+      const imgs: HTMLImageElement[] = [];
+      for (const url of allMemberUrls) {
+        const img = new Image();
+        img.onload = () => {
+          loaded++;
+          if (loaded === allMemberUrls.length) {
+            allImgsRef.current = imgs;
+            allImgsLoadedRef.current = true;
+          }
+        };
+        img.src = url;
+        imgs.push(img);
+      }
+    } else if (MEMBER_IMG_URL) {
+      const img = new Image();
+      img.onload = () => {
+        memberImgRef.current = img;
+        memberLoadedRef.current = true;
+      };
+      img.src = MEMBER_IMG_URL;
+    }
   }, []);
 
   useEffect(() => {
@@ -108,13 +132,14 @@ export function ParallaxMoleculeCanvas({
       const particles: Particle[] = [];
       // Scale particle count by screen area (counts tuned for ~1920×1080)
       const scale = Math.min(1, (w * h) / (1920 * 1080));
+      let globalIdx = 0;
       for (let li = 0; li < LAYERS.length; li++) {
         const cfg = LAYERS[li]!;
         const count = Math.max(3, Math.round(cfg.count * scale));
         const [sMin, sMax] = cfg.sizeRange;
         const [aMin, aMax] = cfg.alphaRange;
         for (let i = 0; i < count; i++) {
-          const memberScale = MEMBER_IMG_URL ? 2.5 : 1;
+          const memberScale = MEMBER_MODE ? 2.5 : 1;
           particles.push({
             x: Math.random() * w,
             y: Math.random() * h,
@@ -126,7 +151,9 @@ export function ParallaxMoleculeCanvas({
             layer: li,
             idx: i,
             phase: Math.random() * Math.PI * 2,
+            memberImgIdx: ALL_MODE ? globalIdx % allMemberUrls.length : 0,
           });
+          globalIdx++;
         }
       }
       particlesRef.current = particles;
@@ -211,7 +238,7 @@ export function ParallaxMoleculeCanvas({
           const dx = p.x - mouse.x;
           const dy = ry - mouse.y;
           const dist = Math.sqrt(dx * dx + dy * dy);
-          const repelR = MEMBER_IMG_URL ? 250 : 160;
+          const repelR = MEMBER_MODE ? 250 : 160;
           if (dist < repelR && dist > 0) {
             const force = (repelR - dist) / repelR;
             p.vx += (dx / dist) * force * 0.2;
@@ -269,15 +296,18 @@ export function ParallaxMoleculeCanvas({
         }
 
         // Particles
-        const useMemberImg = MEMBER_IMG_URL && memberLoadedRef.current && memberImgRef.current;
+        const useSingleImg = MEMBER_IMG_URL && memberLoadedRef.current && memberImgRef.current;
+        const useAllImgs = ALL_MODE && allImgsLoadedRef.current && allImgsRef.current.length > 0;
         for (const { px, py, p } of rendered) {
           if (px < -20 || px > w + 20 || py < -20 || py > h + 20) continue;
 
           const breathe = Math.sin(time * 1.8 + p.phase) * 0.05;
           const a = Math.max(0, p.alpha + breathe);
 
-          if (useMemberImg) {
-            const img = memberImgRef.current!;
+          if (useSingleImg || useAllImgs) {
+            const img = useAllImgs
+              ? allImgsRef.current[p.memberImgIdx]!
+              : memberImgRef.current!;
             const minDim = Math.min(img.width, img.height);
             const sx = (img.width - minDim) / 2;
             const sy = (img.height - minDim) / 2;

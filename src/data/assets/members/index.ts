@@ -41,3 +41,19 @@ export const memberCodes: Record<string, string> = {
   MHT: manh_hung_tran,
   NRW: nick_wierich,
 };
+
+/** All member image URLs for the ALL mode */
+export const allMemberUrls: string[] = [
+  frank_glorius,
+  ajnabiul_hoque,
+  felix_katzenburg,
+  florian_boser,
+  niklas_dobberstein,
+  niklas_hoelter,
+  maik_niedziella,
+  debanjan_rana,
+  leon_schlosser,
+  jan_spies,
+  manh_hung_tran,
+  nick_wierich,
+];

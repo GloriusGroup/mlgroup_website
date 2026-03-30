@@ -39,6 +39,7 @@
     "name": "EnTdecker",
     "description": "EnTdecker – A Machine Learning-Based Platform for Guiding Substrate Discovery in Energy Transfer Catalysis.",
     "url": "https://github.com/GloriusGroup/EnTdecker",
+    "website": "https://entdecker.uni-muenster.de/",
     "language": "Python",
     "license": "MIT",
     "tags": ["photocatalysis", "inverse design", "energy transfer"],
@@ -46,6 +47,7 @@
   },
   {
     "url": "https://github.com/GloriusGroup/standardizing-substrate-selection",
+    "website": "https://pharmascope.uni-muenster.de/",
     "name": "Standardizing Substrate Selection",
     "description": "Standardizing Substrate Selection: A Strategy toward Unbiased Evaluation of Reaction Generality.",
     "language": "Python",

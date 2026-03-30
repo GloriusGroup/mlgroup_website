@@ -23,7 +23,7 @@
   },
   {
     "name": "Dr. Felix Katzenburg",
-    "role": "PhD Researcher",
+    "role": "PhD Student",
     "image": "felix_katzenburg.png",
     "email": "felix.katzenburg@uni-muenster.de",
     "description": "Developer of pyGecko for calibration-free GC-MS/FID quantification and automated high-throughput reaction screening. Co-developed evolutionary algorithms for interpretable molecular representations.",
@@ -35,10 +35,10 @@
   },
   {
     "name": "Florian Boser",
-    "role": "PhD Researcher",
+    "role": "PhD Student",
     "image": "florian_boser.png",
     "email": "florian.boser@uni-muenster.de",
-    "description": "Laboratory automation and data-centric approaches to autonomous chemical discovery. Contributed to the Schlenkputer platform for autonomous air-sensitive reactions, and works on strain-release photocatalysis and high-throughput screening.",
+    "description": "Laboratory automation, high-throughput experimentation, machine learning for reactivity prediction, negative data augmentation and agentic LLM workflows for autonomous chemical discovery. Big Di",
     "links": {
       "scholar": "https://scholar.google.de/citations?view_op=list_works&hl=de&user=AneRffQAAAAJ&hl",
       "linkedin": "https://www.linkedin.com/in/florian-boser",
@@ -47,7 +47,7 @@
   },
   {
     "name": "Niklas Dobberstein",
-    "role": "PhD Researcher",
+    "role": "PhD Student",
     "image": "niklas_dobberstein.png",
     "email": "niklas.dobberstein@uni-muenster.de",
     "description": "Generative transformer models for de novo molecular design (LLamol) and autoregressive crystal structure generation (Materium). Focuses on multi-conditional molecular generation and interpretable molecular representations.",
@@ -59,7 +59,7 @@
   },
   {
     "name": "Niklas Hölter",
-    "role": "PhD Researcher",
+    "role": "PhD Student",
     "image": "niklas_hoelter.png",
     "email": "niklas.hoelter@uni-muenster.de",
     "description": "Photocatalysis and synthetic methodology, including phenothiazine sulfoxide photocatalysts and photocatalytic iminothiolation. Previously co-authored work on standardized substrate selection strategies for unbiased evaluation of reaction generality.",
@@ -70,17 +70,17 @@
   },
   {
     "name": "Maik Niedziella",
-    "role": "PhD Researcher",
+    "role": "PhD Student",
     "image": "maik_niedziella.png",
     "email": "m_nied07@uni-muenster.de",
-    "description": "Radical philicity prediction using machine learning, high-throughput automated GC-MS methods, and phosphine-catalyzed annulation reactions.",
+    "description": "Focused on developing machine learning strategies for reaction discovery by applying structure elucidation techniques to GC-MS spectra, enabling automated identification of unknown products from complex analytical data.",
     "links": {
       "linkedin": "https://www.linkedin.com/in/maik-niedziella-395623212/"
     }
   },
   {
     "name": "Debanjan Rana",
-    "role": "PhD Researcher",
+    "role": "PhD Student",
     "image": "debanjan_rana.png",
     "email": "debanjan.rana@uni-muenster.de",
     "description": "Energy transfer catalysis and data-driven screening strategies for dearomative cycloadditions. Co-developed the EnTdecker platform and co-authored work on standardized substrate selection for unbiased reaction evaluation.",
@@ -90,20 +90,20 @@
   },
   {
     "name": "Leon Schlosser",
-    "role": "PhD Researcher",
+    "role": "PhD Student",
     "image": "leon_schlosser.png",
     "email": "leon.schlosser@uni-muenster.de",
-    "description": "Lead developer of EnTdecker, an ML-based platform for substrate discovery in energy transfer catalysis. Works on inverse photocatalyst design, machine learning for enantioselective organocatalysis, and dearomative cycloaddition discovery.",
+    "description": "Combining data-driven and experimental screening strategies for accelerated discovery in photocatalysis.",
     "links": {
       "orcid": "https://orcid.org/0009-0007-6764-6497"
     }
   },
   {
     "name": "Jan Spies",
-    "role": "PhD Researcher",
+    "role": "PhD Student",
     "image": "jan_spies.png",
     "email": "j_spie17@uni-muenster.de",
-    "description": "Energy transfer photochemistry, including Brook rearrangement-enabled synthesis of gamma-amino alcohols. Background in NHC chemistry for microelectronic applications and molecular prosthetics for urea cycle disorders.",
+    "description": "I am working to make organic chemistry literature data more usable for predictive modeling. To do this, I apply Positive-Unlabeled learning to train robust models from biased and imbalanced chemical data.",
     "links": {
       "linkedin": "https://www.linkedin.com/in/jan-spies-b01395241/",
       "orcid": "https://orcid.org/0009-0005-9793-6319"
@@ -111,20 +111,20 @@
   },
   {
     "name": "Manh Hung Tran",
-    "role": "PhD Researcher",
+    "role": "PhD Student",
     "image": "manh_hung_tran.png",
     "email": "manh-hung.tran@uni-muenster.de",
-    "description": "Robustness screening, automated substrate screening, and chemical space analysis to systematically evaluate reaction performance, accelerate discovery, and guide data-driven optimization across diverse molecular libraries.",
+    "description": "Quantum chemical calculations for mechanistic studies and descriptor generation, combined with chemical space analysis and high-throughput platforms for robustness screening.",
     "links": {
       "linkedin": "https://www.linkedin.com/in/mhungtran/"
     }
   },
   {
     "name": "Nick Wierich",
-    "role": "PhD Researcher",
+    "role": "PhD Student",
     "image": "nick_wierich.png",
     "email": "nwierich@uni-muenster.de",
-    "description": "Photoredox catalysis and radical chemistry, including alkyl radical generation from boronic esters via aminyl radical substitution. Background in strained molecule chemistry and bicyclo[1.1.0]butane reactivity.",
+    "description": "Committed to making synthetic chemistry smarter and faster by joining machine learning with lab automation.",
     "links": {
       "linkedin": "https://www.linkedin.com/in/nick-wierich/"
     }

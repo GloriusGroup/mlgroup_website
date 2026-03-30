@@ -21,8 +21,8 @@ import { ACCENT_PRESETS } from "./shared/accents";
 // Experimental feature flags (URL params)
 const PARALLAX_MODE = true; //new URLSearchParams(window.location.search).get("parallax") === "true";
 
-// Background mode: "grid" (default), "circuit", "dots", "none"
-const BG_MODE: "grid" | "circuit" | "dots" | "none" = "grid";
+// Background mode: "grid" (default), "circuit", "dots", "hexagons", "circuit-board", "none"
+const BG_MODE: "grid" | "circuit" | "dots" | "hexagons" | "circuit-board" | "none" = "circuit-board";
 
 // Set after successful posthog.init()
 let posthogInitialized = false;
@@ -52,7 +52,7 @@ function App() {
   useEffect(() => {
     const el = document.documentElement;
     // Apply background mode class
-    el.classList.remove("bg-grid", "bg-circuit", "bg-dots", "bg-none");
+    el.classList.remove("bg-grid", "bg-circuit", "bg-dots", "bg-hexagons", "bg-circuit-board", "bg-none");
     el.classList.add(`bg-${BG_MODE}`);
   }, []);
 

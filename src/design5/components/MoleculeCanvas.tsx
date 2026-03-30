@@ -1,13 +1,18 @@
 import React, { useEffect, useRef, useCallback } from "react";
-import { memberImages, memberCodes } from "../../data/assets/members";
+import { memberImages, memberCodes, allMemberUrls } from "../../data/assets/members";
 
 const MOLECULE_MODE = new URLSearchParams(window.location.search).get("molecule_mode") === "true";
 
 // Easter egg: ?member=NDO → particles become that member's face (3-letter codes)
+// ?member=ALL → each particle gets a random member, equally distributed
 const MEMBER_MODE_PARAM = new URLSearchParams(window.location.search).get("member")?.toUpperCase() ?? null;
-const MEMBER_IMG_URL = MEMBER_MODE_PARAM
-  ? memberCodes[MEMBER_MODE_PARAM] ?? memberImages[MEMBER_MODE_PARAM] ?? null
-  : null;
+const ALL_MODE = MEMBER_MODE_PARAM === "ALL";
+const MEMBER_IMG_URL = ALL_MODE
+  ? null
+  : MEMBER_MODE_PARAM
+    ? memberCodes[MEMBER_MODE_PARAM] ?? memberImages[MEMBER_MODE_PARAM] ?? null
+    : null;
+const MEMBER_MODE = ALL_MODE || !!MEMBER_IMG_URL;
 
 interface MoleculeShape {
   name: string;
@@ -102,6 +107,7 @@ interface Particle {
   vy: number;
   r: number;
   isNode: boolean;
+  memberImgIdx: number;
 }
 
 export function MoleculeCanvas({ isDark, accentRgb }: { isDark: boolean; accentRgb: string }) {
@@ -111,15 +117,33 @@ export function MoleculeCanvas({ isDark, accentRgb }: { isDark: boolean; accentR
   const animationRef = useRef<number>(0);
   const memberImgRef = useRef<HTMLImageElement | null>(null);
   const memberLoadedRef = useRef(false);
+  const allImgsRef = useRef<HTMLImageElement[]>([]);
+  const allImgsLoadedRef = useRef(false);
 
   useEffect(() => {
-    if (!MEMBER_IMG_URL) return;
-    const img = new Image();
-    img.onload = () => {
-      memberImgRef.current = img;
-      memberLoadedRef.current = true;
-    };
-    img.src = MEMBER_IMG_URL;
+    if (ALL_MODE) {
+      let loaded = 0;
+      const imgs: HTMLImageElement[] = [];
+      for (const url of allMemberUrls) {
+        const img = new Image();
+        img.onload = () => {
+          loaded++;
+          if (loaded === allMemberUrls.length) {
+            allImgsRef.current = imgs;
+            allImgsLoadedRef.current = true;
+          }
+        };
+        img.src = url;
+        imgs.push(img);
+      }
+    } else if (MEMBER_IMG_URL) {
+      const img = new Image();
+      img.onload = () => {
+        memberImgRef.current = img;
+        memberLoadedRef.current = true;
+      };
+      img.src = MEMBER_IMG_URL;
+    }
   }, []);
 
   const initParticles = useCallback((w: number, h: number) => {
@@ -161,12 +185,13 @@ export function MoleculeCanvas({ isDark, accentRgb }: { isDark: boolean; accentR
             vy: (Math.random() - 0.5) * 0.15,
             r: a === 0 ? 6 : 4 + Math.random() * 2,
             isNode: a === 0,
+            memberImgIdx: ALL_MODE ? particles.length % allMemberUrls.length : 0,
           });
         }
       }
     } else {
       const scale = Math.min(1, (w * h) / (1920 * 1080));
-      const baseCount = MEMBER_IMG_URL ? 45 : 65;
+      const baseCount = MEMBER_MODE ? 45 : 65;
       const count = Math.max(8, Math.round(baseCount * scale));
       for (let i = 0; i < count; i++) {
         particles.push({
@@ -174,8 +199,9 @@ export function MoleculeCanvas({ isDark, accentRgb }: { isDark: boolean; accentR
           y: Math.random() * h,
           vx: (Math.random() - 0.5) * 0.4,
           vy: (Math.random() - 0.5) * 0.4,
-          r: MEMBER_IMG_URL ? 15 + Math.random() * 15 : 5.0 + Math.random() * 3.5,
+          r: MEMBER_MODE ? 15 + Math.random() * 15 : 5.0 + Math.random() * 3.5,
           isNode: i % 5 === 0,
+          memberImgIdx: ALL_MODE ? i % allMemberUrls.length : 0,
         });
       }
     }
@@ -244,7 +270,7 @@ export function MoleculeCanvas({ isDark, accentRgb }: { isDark: boolean; accentR
         const dx = p.x - mouse.x;
         const dy = p.y - mouse.y;
         const dist = Math.sqrt(dx * dx + dy * dy);
-        const repelRadius = MEMBER_IMG_URL ? 250 : 160;
+        const repelRadius = MEMBER_MODE ? 250 : 160;
 
         if (dist < repelRadius && dist > 0) {
           const force = (repelRadius - dist) / repelRadius;
@@ -286,14 +312,18 @@ export function MoleculeCanvas({ isDark, accentRgb }: { isDark: boolean; accentR
         }
       }
 
-      if (MEMBER_IMG_URL && memberLoadedRef.current && memberImgRef.current) {
-        const img = memberImgRef.current;
-        const minDim = Math.min(img.width, img.height);
-        const sx = (img.width - minDim) / 2;
-        const sy = (img.height - minDim) / 2;
-
+      const useSingleImg = MEMBER_IMG_URL && memberLoadedRef.current && memberImgRef.current;
+      const useAllImgs = ALL_MODE && allImgsLoadedRef.current && allImgsRef.current.length > 0;
+      if (useSingleImg || useAllImgs) {
         for (const p of particles) {
+          const img = useAllImgs
+            ? allImgsRef.current[p.memberImgIdx]!
+            : memberImgRef.current!;
+          const minDim = Math.min(img.width, img.height);
+          const sx = (img.width - minDim) / 2;
+          const sy = (img.height - minDim) / 2;
           const size = p.r * 2;
+
           ctx.save();
           ctx.beginPath();
           ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
