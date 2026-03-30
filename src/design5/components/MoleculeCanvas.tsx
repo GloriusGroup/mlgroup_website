@@ -1,12 +1,12 @@
 import React, { useEffect, useRef, useCallback } from "react";
 import { memberImages, memberCodes, allMemberUrls } from "../../data/assets/members";
+import { MEMBER_MODE_PARAM, ALL_MODE } from "../shared/utils";
 
 const MOLECULE_MODE = new URLSearchParams(window.location.search).get("molecule_mode") === "true";
 
 // Easter egg: ?member=NDO → particles become that member's face (3-letter codes)
 // ?member=ALL → each particle gets a random member, equally distributed
-const MEMBER_MODE_PARAM = new URLSearchParams(window.location.search).get("member")?.toUpperCase() ?? null;
-const ALL_MODE = MEMBER_MODE_PARAM === "ALL";
+// 1/100 chance of ALL mode activating automatically (computed in shared/utils)
 const MEMBER_IMG_URL = ALL_MODE
   ? null
   : MEMBER_MODE_PARAM

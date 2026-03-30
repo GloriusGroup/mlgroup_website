@@ -1,3 +1,10 @@
+// Member mode — computed once, shared across all canvas components
+const _MEMBER_PARAM = new URLSearchParams(window.location.search).get("member")?.toUpperCase() ?? null;
+const _LUCKY_ALL = !_MEMBER_PARAM && Math.random() < 0.01;
+export const MEMBER_MODE_PARAM = _MEMBER_PARAM;
+export const ALL_MODE = _MEMBER_PARAM === "ALL" || _LUCKY_ALL;
+console.log(`[shared/utils] MEMBER_MODE_PARAM=${MEMBER_MODE_PARAM}, LUCKY_ALL=${_LUCKY_ALL}, ALL_MODE=${ALL_MODE}`);
+
 const AVATAR_GRADIENTS = [
   "linear-gradient(135deg, #22d3ee, #0891b2)",
   "linear-gradient(135deg, #3b82f6, #2563eb)",

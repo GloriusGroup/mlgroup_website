@@ -32,22 +32,8 @@ let posthogInitialized = false;
 // ---------------------------------------------------------------------------
 function App() {
   const [isDark, setIsDark] = useState(true);
-  const [accentIndex, setAccentIndex] = useState(
-    () => {
-      const stored = localStorage.getItem("accent_index");
-      return stored ? Math.min(Number(stored), ACCENT_PRESETS.length - 1) : 0;
-    }
-  );
-  const [devSwitchEnabled, setDevSwitchEnabled] = useState(false);
-
-  useEffect(() => {
-    fetch("/api/dev-config")
-      .then((res) => res.json())
-      .then(({ themeSwitch }: { themeSwitch: boolean }) => {
-        setDevSwitchEnabled(themeSwitch);
-      })
-      .catch(() => {});
-  }, []);
+  const [accentIndex, setAccentIndex] = useState(3); // Pale
+  const devSwitchEnabled = false;
 
   useEffect(() => {
     const el = document.documentElement;

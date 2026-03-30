@@ -1,10 +1,10 @@
 import React, { useEffect, useRef } from "react";
 import { memberImages, memberCodes, allMemberUrls } from "../../data/assets/members";
+import { MEMBER_MODE_PARAM, ALL_MODE } from "../shared/utils";
 
 // Easter egg: ?member=NDO → particles become that member's face (3-letter codes)
 // ?member=ALL → each particle gets a random member, equally distributed
-const MEMBER_MODE_PARAM = new URLSearchParams(window.location.search).get("member")?.toUpperCase() ?? null;
-const ALL_MODE = MEMBER_MODE_PARAM === "ALL";
+// 1/100 chance of ALL mode activating automatically (computed in shared/utils)
 const MEMBER_IMG_URL = ALL_MODE
   ? null
   : MEMBER_MODE_PARAM
@@ -98,16 +98,22 @@ export function ParallaxMoleculeCanvas({
 
   useEffect(() => {
     if (ALL_MODE) {
-      let loaded = 0;
+      console.log(`[ParallaxCanvas] ALL_MODE active, loading ${allMemberUrls.length} member images...`);
+      let done = 0;
       const imgs: HTMLImageElement[] = [];
       for (const url of allMemberUrls) {
         const img = new Image();
         img.onload = () => {
-          loaded++;
-          if (loaded === allMemberUrls.length) {
+          done++;
+          console.log(`[ParallaxCanvas] Image loaded (${done}/${allMemberUrls.length}): ${url.slice(-30)}`);
+          if (!allImgsLoadedRef.current) {
             allImgsRef.current = imgs;
             allImgsLoadedRef.current = true;
           }
+        };
+        img.onerror = () => {
+          done++;
+          console.warn(`[ParallaxCanvas] Image FAILED (${done}/${allMemberUrls.length}): ${url.slice(-30)}`);
         };
         img.src = url;
         imgs.push(img);
@@ -246,6 +252,24 @@ export function ParallaxMoleculeCanvas({
           }
         }
 
+        // Soft edge repulsion in the hero viewport — pushes particles away
+        // from the left/right margins where the circuit traces live
+        const edgeZone = w * 0.18; // match the ~20vw circuit trace width
+        const ry = renderedY(p);
+        const inHero = ry - scrollY > -50 && ry - scrollY < h;
+        if (inHero && edgeZone > 0) {
+          // Left edge
+          if (p.x < edgeZone) {
+            const t = 1 - p.x / edgeZone; // 1 at edge, 0 at boundary
+            p.vx += t * t * 0.15;
+          }
+          // Right edge
+          if (p.x > w - edgeZone) {
+            const t = 1 - (w - p.x) / edgeZone;
+            p.vx -= t * t * 0.15;
+          }
+        }
+
         // Drift + damping
         p.vx += (Math.random() - 0.5) * 0.03;
         p.vy += (Math.random() - 0.5) * 0.03;
@@ -306,8 +330,16 @@ export function ParallaxMoleculeCanvas({
 
           if (useSingleImg || useAllImgs) {
             const img = useAllImgs
-              ? allImgsRef.current[p.memberImgIdx]!
+              ? allImgsRef.current[p.memberImgIdx]
               : memberImgRef.current!;
+            if (!img || !img.complete || img.naturalWidth === 0) {
+              // Image not ready yet — draw a normal dot instead
+              ctx.beginPath();
+              ctx.arc(px, py, p.r * 0.4, 0, Math.PI * 2);
+              ctx.fillStyle = `rgba(${baseColor}, ${a})`;
+              ctx.fill();
+              continue;
+            }
             const minDim = Math.min(img.width, img.height);
             const sx = (img.width - minDim) / 2;
             const sy = (img.height - minDim) / 2;

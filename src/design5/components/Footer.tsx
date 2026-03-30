@@ -4,7 +4,7 @@ export function Footer() {
   return (
     <footer className="footer">
       <p className="footer__text">
-        &copy; 2025 Glorius Lab &mdash; Data Science Subgroup
+        &copy; {new Date().getFullYear()} Glorius Lab &mdash; Data Science Subgroup
         <span>University of <span lang="de">M&uuml;nster</span></span>
       </p>
       <div className="footer__legal">
