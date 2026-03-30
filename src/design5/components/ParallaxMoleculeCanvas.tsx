@@ -78,6 +78,16 @@ interface Particle {
   memberImgIdx: number;
 }
 
+interface LayerFrameBuffers {
+  x: Float32Array;
+  y: Float32Array;
+  bucketCounts: Uint16Array;
+  lineBuckets: [Float32Array, Float32Array, Float32Array, Float32Array];
+}
+
+const IS_FIREFOX =
+  typeof navigator !== "undefined" && /firefox/i.test(navigator.userAgent);
+
 export function ParallaxMoleculeCanvas({
   isDark,
   accentRgb,
@@ -128,15 +138,35 @@ export function ParallaxMoleculeCanvas({
     }
   }, []);
 
- useEffect(() => {
+  useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
-    const ctx = canvas.getContext("2d");
+    const ctx = canvas.getContext("2d", { desynchronized: true });
     if (!ctx) return;
+
+    const isFirefox = IS_FIREFOX;
+    const firefoxDensityScale = 0.72;
+    const firefoxConnectionScale = 0.82;
+    const minFrameTime = isFirefox ? 1000 / 30 : 0;
+    const scrollOffsets = new Float32Array(LAYERS.length);
+    const colorCache = new Map<number, string>();
+    let lastFrameTime = 0;
+    let layerBuffers: LayerFrameBuffers[] = [];
+
+    const toRgba = (alpha: number) => {
+      const clamped = Math.max(0, Math.min(1, alpha));
+      const key = Math.round(clamped * 1000);
+      const cached = colorCache.get(key);
+      if (cached) return cached;
+      const value = `rgba(${accentRgb}, ${(key / 1000).toFixed(3)})`;
+      colorCache.set(key, value);
+      return value;
+    };
 
     const initParticles = (w: number, h: number) => {
       const particles: Particle[] = [];
-      const scale = Math.min(1, (w * h) / (1920 * 1080));
+      const densityScale = isFirefox ? firefoxDensityScale : 1;
+      const scale = Math.min(1, (w * h) / (1920 * 1080)) * densityScale;
       let globalIdx = 0;
       for (let li = 0; li < LAYERS.length; li++) {
         const cfg = LAYERS[li]!;
@@ -164,15 +194,26 @@ export function ParallaxMoleculeCanvas({
       particlesRef.current = particles;
     };
 
-    // 1. MOVE THESE UP HERE:
-    // Pre-group particles by layer (avoids filter/map allocation every frame)
     const layerGroups: Particle[][] = LAYERS.map(() => []);
     const rebuildLayerGroups = () => {
       for (const g of layerGroups) g.length = 0;
       for (const p of particlesRef.current) layerGroups[p.layer]!.push(p);
+      layerBuffers = layerGroups.map((group) => {
+        const pairCapacity = Math.max(4, group.length * (group.length - 1) * 2);
+        return {
+          x: new Float32Array(group.length),
+          y: new Float32Array(group.length),
+          bucketCounts: new Uint16Array(4),
+          lineBuckets: [
+            new Float32Array(pairCapacity),
+            new Float32Array(pairCapacity),
+            new Float32Array(pairCapacity),
+            new Float32Array(pairCapacity),
+          ],
+        };
+      });
     };
 
-    // 2. NOW resize() CAN SAFELY CALL rebuildLayerGroups()
     const resize = () => {
       canvas.width = window.innerWidth;
       canvas.height = window.innerHeight;
@@ -182,7 +223,6 @@ export function ParallaxMoleculeCanvas({
       }
     };
     
-    // 3. THIS IMMEDIATE CALL WON'T CRASH ANYMORE
     resize();
     window.addEventListener("resize", resize);
 
@@ -199,16 +239,18 @@ export function ParallaxMoleculeCanvas({
     const handleMouseLeave = () => {
       mouseRef.current = { x: -9999, y: -9999 };
     };
-    document.addEventListener("mouseleave", handleMouseLeave);;
+    document.addEventListener("mouseleave", handleMouseLeave);
 
-    // Pre-group particles by layer (avoids filter/map allocation every frame)
-    // const layerGroups: Particle[][] = LAYERS.map(() => []);
-    // const rebuildLayerGroups = () => {
-    //   for (const g of layerGroups) g.length = 0;
-    //   for (const p of particlesRef.current) layerGroups[p.layer]!.push(p);
-    // };
+    const animate = (timestamp: number) => {
+      if (minFrameTime > 0 && timestamp - lastFrameTime < minFrameTime) {
+        animationRef.current = requestAnimationFrame(animate);
+        return;
+      }
+      const deltaMs = lastFrameTime === 0 ? 1000 / 60 : Math.min(100, timestamp - lastFrameTime);
+      const frameScale = Math.min(2.5, deltaMs / (1000 / 60));
+      const damping = Math.pow(0.985, frameScale);
+      lastFrameTime = timestamp;
 
-    const animate = () => {
       const w = canvas.width;
       const h = canvas.height;
       ctx.clearRect(0, 0, w, h);
@@ -217,15 +259,12 @@ export function ParallaxMoleculeCanvas({
       if (layerGroups[0]!.length === 0) rebuildLayerGroups();
       const scrollY = scrollRef.current;
       const mouse = mouseRef.current;
-      timeRef.current += 0.006;
+      timeRef.current += 0.006 * frameScale;
       const time = timeRef.current;
-
-      const baseColor = accentRgb;
 
       // Pre-compute scroll offsets per layer
       const buf = 80;
       const wrapH = h + buf * 2;
-      const scrollOffsets: number[] = [];
       for (let i = 0; i < LAYERS.length; i++) scrollOffsets[i] = -scrollY * LAYERS[i]!.scrollSpeed;
 
       // Inline renderedY to avoid function call overhead in hot loops
@@ -250,7 +289,7 @@ export function ParallaxMoleculeCanvas({
             const ddSq = ddx * ddx + ddy * ddy;
             if (ddSq < repelDistSq && ddSq > 0) {
               const dd = Math.sqrt(ddSq);
-              const f = ((repelDist - dd) / repelDist) * 0.04;
+              const f = ((repelDist - dd) / repelDist) * 0.04 * frameScale;
               const fx = (ddx / dd) * f;
               const fy = (ddy / dd) * f;
               pI.vx += fx;
@@ -278,8 +317,8 @@ export function ParallaxMoleculeCanvas({
           if (distSq < repelRSq && distSq > 0) {
             const dist = Math.sqrt(distSq);
             const force = (repelR - dist) / repelR;
-            p.vx += (dx / dist) * force * 0.2;
-            p.vy += (dy / dist) * force * 0.2;
+            p.vx += (dx / dist) * force * 0.2 * frameScale;
+            p.vy += (dy / dist) * force * 0.2 * frameScale;
           }
         }
 
@@ -289,21 +328,21 @@ export function ParallaxMoleculeCanvas({
           if (ry - scrollY > -50 && ry - scrollY < h) {
             if (p.x < edgeZone) {
               const t = 1 - p.x / edgeZone;
-              p.vx += t * t * 0.15;
+              p.vx += t * t * 0.15 * frameScale;
             } else if (p.x > w - edgeZone) {
               const t = 1 - (w - p.x) / edgeZone;
-              p.vx -= t * t * 0.15;
+              p.vx -= t * t * 0.15 * frameScale;
             }
           }
         }
 
         // Drift + damping
-        p.vx += (Math.random() - 0.5) * 0.03;
-        p.vy += (Math.random() - 0.5) * 0.03;
-        p.vx *= 0.985;
-        p.vy *= 0.985;
-        p.x += p.vx;
-        p.y += p.vy;
+        p.vx += (Math.random() - 0.5) * 0.03 * frameScale;
+        p.vy += (Math.random() - 0.5) * 0.03 * frameScale;
+        p.vx *= damping;
+        p.vy *= damping;
+        p.x += p.vx * frameScale;
+        p.y += p.vy * frameScale;
 
         if (p.x < -50) p.x += w + 100;
         if (p.x > w + 50) p.x -= w + 100;
@@ -318,20 +357,25 @@ export function ParallaxMoleculeCanvas({
       for (let li = 0; li < LAYERS.length; li++) {
         const cfg = LAYERS[li]!;
         const group = layerGroups[li]!;
-        const connDist = cfg.connectionDist;
+        const buffers = layerBuffers[li]!;
+        const rpx = buffers.x;
+        const rpy = buffers.y;
+        const connDist = cfg.connectionDist * (isFirefox ? firefoxConnectionScale : 1);
         const connDistSq = connDist * connDist;
         const avgAlpha = (cfg.alphaRange[0] + cfg.alphaRange[1]) * 0.5;
 
         // Compute rendered positions into a reusable buffer
-        const rpx: number[] = [];
-        const rpy: number[] = [];
         for (let i = 0; i < group.length; i++) {
           rpx[i] = group[i]!.x;
           rpy[i] = renderedY(group[i]!);
         }
 
-        // Batch connections by approximate alpha (4 buckets to reduce state changes)
-        const buckets: { ax: number; ay: number; bx: number; by: number; alpha: number }[][] = [[], [], [], []];
+        // Batch connections by approximate alpha without allocating per-frame objects.
+        const bucketCounts = buffers.bucketCounts;
+        bucketCounts[0] = 0;
+        bucketCounts[1] = 0;
+        bucketCounts[2] = 0;
+        bucketCounts[3] = 0;
         for (let i = 0; i < group.length; i++) {
           const ax = rpx[i]!;
           const ay = rpy[i]!;
@@ -345,7 +389,13 @@ export function ParallaxMoleculeCanvas({
               const dist = Math.sqrt(distSq);
               const alpha = (1 - dist / connDist) * avgAlpha;
               const bucket = Math.min(3, (alpha * 4) | 0);
-              buckets[bucket]!.push({ ax, ay, bx: rpx[j]!, by: rpy[j]!, alpha });
+              const lineBuffer = buffers.lineBuckets[bucket]!;
+              const offset = bucketCounts[bucket] * 4;
+              lineBuffer[offset] = ax;
+              lineBuffer[offset + 1] = ay;
+              lineBuffer[offset + 2] = rpx[j]!;
+              lineBuffer[offset + 3] = rpy[j]!;
+              bucketCounts[bucket]++;
             }
           }
         }
@@ -353,15 +403,15 @@ export function ParallaxMoleculeCanvas({
         // Draw connection batches (one beginPath/stroke per bucket)
         ctx.lineWidth = cfg.lineWidth;
         for (let b = 0; b < 4; b++) {
-          const lines = buckets[b]!;
-          if (lines.length === 0) continue;
+          const lineCount = bucketCounts[b]!;
+          if (lineCount === 0) continue;
+          const lines = buffers.lineBuckets[b]!;
           const midAlpha = (b + 0.5) / 4 * avgAlpha;
-          ctx.strokeStyle = `rgba(${baseColor}, ${midAlpha.toFixed(3)})`;
+          ctx.strokeStyle = toRgba(midAlpha);
           ctx.beginPath();
-          for (let k = 0; k < lines.length; k++) {
-            const ln = lines[k]!;
-            ctx.moveTo(ln.ax, ln.ay);
-            ctx.lineTo(ln.bx, ln.by);
+          for (let k = 0; k < lineCount * 4; k += 4) {
+            ctx.moveTo(lines[k]!, lines[k + 1]!);
+            ctx.lineTo(lines[k + 2]!, lines[k + 3]!);
           }
           ctx.stroke();
         }
@@ -382,14 +432,14 @@ export function ParallaxMoleculeCanvas({
             // Dot
             ctx.beginPath();
             ctx.arc(px, py, p.r, 0, Math.PI * 2);
-            ctx.fillStyle = `rgba(${baseColor}, ${a.toFixed(3)})`;
+            ctx.fillStyle = toRgba(a);
             ctx.fill();
 
             // Node ring
             if (p.isNode) {
               ctx.beginPath();
               ctx.arc(px, py, p.r + 5, 0, Math.PI * 2);
-              ctx.strokeStyle = `rgba(${baseColor}, ${(a * 0.3).toFixed(3)})`;
+              ctx.strokeStyle = toRgba(a * 0.3);
               ctx.lineWidth = 0.5;
               ctx.stroke();
             }
@@ -401,7 +451,7 @@ export function ParallaxMoleculeCanvas({
               ctx.lineTo(px + 6, py);
               ctx.moveTo(px, py - 6);
               ctx.lineTo(px, py + 6);
-              ctx.strokeStyle = `rgba(${baseColor}, ${(a * 0.4).toFixed(3)})`;
+              ctx.strokeStyle = toRgba(a * 0.4);
               ctx.lineWidth = 0.5;
               ctx.stroke();
             }
@@ -423,7 +473,7 @@ export function ParallaxMoleculeCanvas({
             if (!img || !img.complete || img.naturalWidth === 0) {
               ctx.beginPath();
               ctx.arc(px, py, p.r * 0.4, 0, Math.PI * 2);
-              ctx.fillStyle = `rgba(${baseColor}, ${a.toFixed(3)})`;
+              ctx.fillStyle = toRgba(a);
               ctx.fill();
               continue;
             }
@@ -442,7 +492,7 @@ export function ParallaxMoleculeCanvas({
 
             ctx.beginPath();
             ctx.arc(px, py, p.r + 2, 0, Math.PI * 2);
-            ctx.strokeStyle = `rgba(${baseColor}, ${(a * 0.6).toFixed(3)})`;
+            ctx.strokeStyle = toRgba(a * 0.6);
             ctx.lineWidth = 0.5;
             ctx.stroke();
           }
