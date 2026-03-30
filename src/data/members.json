@@ -50,7 +50,7 @@
     "role": "PhD Student",
     "image": "niklas_dobberstein.png",
     "email": "niklas.dobberstein@uni-muenster.de",
-    "description": "Generative transformer models for de novo molecular design (LLamol) and autoregressive crystal structure generation (Materium). Focuses on multi-conditional molecular generation and interpretable molecular representations.",
+    "description": "Interested in applying machine learning to chemistry with a focus on generative models for de novo molecular design and reaction prediction.",
     "links": {
       "scholar": "https://scholar.google.co.uk/citations?hl=en&user=VtmLkn4AAAAJ",
       "linkedin": "https://www.linkedin.com/in/niklas-dobberstein-425914189/",
@@ -124,7 +124,7 @@
     "role": "PhD Student",
     "image": "nick_wierich.png",
     "email": "nwierich@uni-muenster.de",
-    "description": "Committed to making synthetic chemistry smarter and faster machine learning.",
+    "description": "Committed to making synthetic chemistry smarter and faster using machine learning.",
     "links": {
       "linkedin": "https://www.linkedin.com/in/nick-wierich/"
     }

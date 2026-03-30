@@ -128,7 +128,7 @@ export function ParallaxMoleculeCanvas({
     }
   }, []);
 
-  useEffect(() => {
+ useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
     const ctx = canvas.getContext("2d");
@@ -136,7 +136,6 @@ export function ParallaxMoleculeCanvas({
 
     const initParticles = (w: number, h: number) => {
       const particles: Particle[] = [];
-      // Scale particle count by screen area (counts tuned for ~1920×1080)
       const scale = Math.min(1, (w * h) / (1920 * 1080));
       let globalIdx = 0;
       for (let li = 0; li < LAYERS.length; li++) {
@@ -165,13 +164,25 @@ export function ParallaxMoleculeCanvas({
       particlesRef.current = particles;
     };
 
+    // 1. MOVE THESE UP HERE:
+    // Pre-group particles by layer (avoids filter/map allocation every frame)
+    const layerGroups: Particle[][] = LAYERS.map(() => []);
+    const rebuildLayerGroups = () => {
+      for (const g of layerGroups) g.length = 0;
+      for (const p of particlesRef.current) layerGroups[p.layer]!.push(p);
+    };
+
+    // 2. NOW resize() CAN SAFELY CALL rebuildLayerGroups()
     const resize = () => {
       canvas.width = window.innerWidth;
       canvas.height = window.innerHeight;
       if (particlesRef.current.length === 0) {
         initParticles(canvas.width, canvas.height);
+        rebuildLayerGroups();
       }
     };
+    
+    // 3. THIS IMMEDIATE CALL WON'T CRASH ANYMORE
     resize();
     window.addEventListener("resize", resize);
 
@@ -188,7 +199,14 @@ export function ParallaxMoleculeCanvas({
     const handleMouseLeave = () => {
       mouseRef.current = { x: -9999, y: -9999 };
     };
-    document.addEventListener("mouseleave", handleMouseLeave);
+    document.addEventListener("mouseleave", handleMouseLeave);;
+
+    // Pre-group particles by layer (avoids filter/map allocation every frame)
+    // const layerGroups: Particle[][] = LAYERS.map(() => []);
+    // const rebuildLayerGroups = () => {
+    //   for (const g of layerGroups) g.length = 0;
+    //   for (const p of particlesRef.current) layerGroups[p.layer]!.push(p);
+    // };
 
     const animate = () => {
       const w = canvas.width;
@@ -196,6 +214,7 @@ export function ParallaxMoleculeCanvas({
       ctx.clearRect(0, 0, w, h);
 
       const particles = particlesRef.current;
+      if (layerGroups[0]!.length === 0) rebuildLayerGroups();
       const scrollY = scrollRef.current;
       const mouse = mouseRef.current;
       timeRef.current += 0.006;
@@ -206,67 +225,75 @@ export function ParallaxMoleculeCanvas({
       // Pre-compute scroll offsets per layer
       const buf = 80;
       const wrapH = h + buf * 2;
-      const scrollOffsets = LAYERS.map((cfg) => -scrollY * cfg.scrollSpeed);
+      const scrollOffsets: number[] = [];
+      for (let i = 0; i < LAYERS.length; i++) scrollOffsets[i] = -scrollY * LAYERS[i]!.scrollSpeed;
 
-      // Helper: get rendered Y for a particle (base Y + scroll offset, wrapped)
+      // Inline renderedY to avoid function call overhead in hot loops
       const renderedY = (p: Particle) => {
         const raw = p.y + scrollOffsets[p.layer]!;
         return ((raw % wrapH) + wrapH) % wrapH - buf;
       };
 
-      // --- Physics ---
-      // Inter-particle soft repulsion (within same layer, using rendered positions)
+      // --- Physics (per-layer to skip cross-layer checks) ---
       const repelDist = 30;
-      for (let i = 0; i < particles.length; i++) {
-        for (let j = i + 1; j < particles.length; j++) {
-          const pI = particles[i]!;
-          const pJ = particles[j]!;
-          if (pI.layer !== pJ.layer) continue;
-          const ddx = pI.x - pJ.x;
-          const ddy = renderedY(pI) - renderedY(pJ);
-          const dd = Math.sqrt(ddx * ddx + ddy * ddy);
-          if (dd < repelDist && dd > 0) {
-            const f = ((repelDist - dd) / repelDist) * 0.04;
-            const fx = (ddx / dd) * f;
-            const fy = (ddy / dd) * f;
-            pI.vx += fx;
-            pI.vy += fy;
-            pJ.vx -= fx;
-            pJ.vy -= fy;
+      const repelDistSq = repelDist * repelDist;
+      for (let li = 0; li < LAYERS.length; li++) {
+        const group = layerGroups[li]!;
+        for (let i = 0; i < group.length; i++) {
+          const pI = group[i]!;
+          for (let j = i + 1; j < group.length; j++) {
+            const pJ = group[j]!;
+            const ddx = pI.x - pJ.x;
+            if (ddx > repelDist || ddx < -repelDist) continue; // early-out
+            const ddy = renderedY(pI) - renderedY(pJ);
+            if (ddy > repelDist || ddy < -repelDist) continue;
+            const ddSq = ddx * ddx + ddy * ddy;
+            if (ddSq < repelDistSq && ddSq > 0) {
+              const dd = Math.sqrt(ddSq);
+              const f = ((repelDist - dd) / repelDist) * 0.04;
+              const fx = (ddx / dd) * f;
+              const fy = (ddy / dd) * f;
+              pI.vx += fx;
+              pI.vy += fy;
+              pJ.vx -= fx;
+              pJ.vy -= fy;
+            }
           }
         }
       }
 
-      for (const p of particles) {
-        // Mouse repulsion against RENDERED position so it matches what you see
-        if (mouse.x > -9000) {
+      const edgeZone = w * 0.18;
+      const mouseActive = mouse.x > -9000;
+      const repelR = MEMBER_MODE ? 250 : 160;
+      const repelRSq = repelR * repelR;
+
+      for (let i = 0; i < particles.length; i++) {
+        const p = particles[i]!;
+        // Mouse repulsion
+        if (mouseActive) {
           const ry = renderedY(p);
           const dx = p.x - mouse.x;
           const dy = ry - mouse.y;
-          const dist = Math.sqrt(dx * dx + dy * dy);
-          const repelR = MEMBER_MODE ? 250 : 160;
-          if (dist < repelR && dist > 0) {
+          const distSq = dx * dx + dy * dy;
+          if (distSq < repelRSq && distSq > 0) {
+            const dist = Math.sqrt(distSq);
             const force = (repelR - dist) / repelR;
             p.vx += (dx / dist) * force * 0.2;
             p.vy += (dy / dist) * force * 0.2;
           }
         }
 
-        // Soft edge repulsion in the hero viewport — pushes particles away
-        // from the left/right margins where the circuit traces live
-        const edgeZone = w * 0.18; // match the ~20vw circuit trace width
-        const ry = renderedY(p);
-        const inHero = ry - scrollY > -50 && ry - scrollY < h;
-        if (inHero && edgeZone > 0) {
-          // Left edge
-          if (p.x < edgeZone) {
-            const t = 1 - p.x / edgeZone; // 1 at edge, 0 at boundary
-            p.vx += t * t * 0.15;
-          }
-          // Right edge
-          if (p.x > w - edgeZone) {
-            const t = 1 - (w - p.x) / edgeZone;
-            p.vx -= t * t * 0.15;
+        // Edge repulsion in hero viewport
+        if (edgeZone > 0) {
+          const ry = renderedY(p);
+          if (ry - scrollY > -50 && ry - scrollY < h) {
+            if (p.x < edgeZone) {
+              const t = 1 - p.x / edgeZone;
+              p.vx += t * t * 0.15;
+            } else if (p.x > w - edgeZone) {
+              const t = 1 - (w - p.x) / edgeZone;
+              p.vx -= t * t * 0.15;
+            }
           }
         }
 
@@ -278,8 +305,6 @@ export function ParallaxMoleculeCanvas({
         p.x += p.vx;
         p.y += p.vy;
 
-        // Wrap base positions — X wraps independently, Y must match wrapH
-        // so the modulo in renderedY stays continuous across the seam
         if (p.x < -50) p.x += w + 100;
         if (p.x > w + 50) p.x -= w + 100;
         if (p.y < -buf) p.y += wrapH;
@@ -287,56 +312,118 @@ export function ParallaxMoleculeCanvas({
       }
 
       // --- Render layers far → near (painter's order) ---
+      const useSingleImg = MEMBER_IMG_URL && memberLoadedRef.current && memberImgRef.current;
+      const useAllImgs = ALL_MODE && allImgsLoadedRef.current && allImgsRef.current.length > 0;
+
       for (let li = 0; li < LAYERS.length; li++) {
         const cfg = LAYERS[li]!;
-        const layerPs = particles.filter((p) => p.layer === li);
+        const group = layerGroups[li]!;
+        const connDist = cfg.connectionDist;
+        const connDistSq = connDist * connDist;
+        const avgAlpha = (cfg.alphaRange[0] + cfg.alphaRange[1]) * 0.5;
 
-        // Rendered positions: base position + scroll parallax offset, wrapped vertically
-        const rendered = layerPs.map((p) => {
-          const py = renderedY(p);
-          return { px: p.x, py, p };
-        });
+        // Compute rendered positions into a reusable buffer
+        const rpx: number[] = [];
+        const rpy: number[] = [];
+        for (let i = 0; i < group.length; i++) {
+          rpx[i] = group[i]!.x;
+          rpy[i] = renderedY(group[i]!);
+        }
 
-        // Connections
-        for (let i = 0; i < rendered.length; i++) {
-          for (let j = i + 1; j < rendered.length; j++) {
-            const a = rendered[i]!;
-            const b = rendered[j]!;
-            const dx = a.px - b.px;
-            const dy = a.py - b.py;
-            const dist = Math.sqrt(dx * dx + dy * dy);
-            if (dist < cfg.connectionDist) {
-              const connAlpha =
-                (1 - dist / cfg.connectionDist) *
-                ((cfg.alphaRange[0] + cfg.alphaRange[1]) * 0.5);
-              ctx.beginPath();
-              ctx.moveTo(a.px, a.py);
-              ctx.lineTo(b.px, b.py);
-              ctx.strokeStyle = `rgba(${baseColor}, ${connAlpha})`;
-              ctx.lineWidth = cfg.lineWidth;
-              ctx.stroke();
+        // Batch connections by approximate alpha (4 buckets to reduce state changes)
+        const buckets: { ax: number; ay: number; bx: number; by: number; alpha: number }[][] = [[], [], [], []];
+        for (let i = 0; i < group.length; i++) {
+          const ax = rpx[i]!;
+          const ay = rpy[i]!;
+          for (let j = i + 1; j < group.length; j++) {
+            const dx = ax - rpx[j]!;
+            if (dx > connDist || dx < -connDist) continue;
+            const dy = ay - rpy[j]!;
+            if (dy > connDist || dy < -connDist) continue;
+            const distSq = dx * dx + dy * dy;
+            if (distSq < connDistSq) {
+              const dist = Math.sqrt(distSq);
+              const alpha = (1 - dist / connDist) * avgAlpha;
+              const bucket = Math.min(3, (alpha * 4) | 0);
+              buckets[bucket]!.push({ ax, ay, bx: rpx[j]!, by: rpy[j]!, alpha });
             }
           }
         }
 
+        // Draw connection batches (one beginPath/stroke per bucket)
+        ctx.lineWidth = cfg.lineWidth;
+        for (let b = 0; b < 4; b++) {
+          const lines = buckets[b]!;
+          if (lines.length === 0) continue;
+          const midAlpha = (b + 0.5) / 4 * avgAlpha;
+          ctx.strokeStyle = `rgba(${baseColor}, ${midAlpha.toFixed(3)})`;
+          ctx.beginPath();
+          for (let k = 0; k < lines.length; k++) {
+            const ln = lines[k]!;
+            ctx.moveTo(ln.ax, ln.ay);
+            ctx.lineTo(ln.bx, ln.by);
+          }
+          ctx.stroke();
+        }
+
         // Particles
-        const useSingleImg = MEMBER_IMG_URL && memberLoadedRef.current && memberImgRef.current;
-        const useAllImgs = ALL_MODE && allImgsLoadedRef.current && allImgsRef.current.length > 0;
-        for (const { px, py, p } of rendered) {
-          if (px < -20 || px > w + 20 || py < -20 || py > h + 20) continue;
+        // Batch normal dots into a single path
+        if (!useSingleImg && !useAllImgs) {
+          // Collect dots, node rings, and crosses by alpha
+          for (let i = 0; i < group.length; i++) {
+            const p = group[i]!;
+            const px = rpx[i]!;
+            const py = rpy[i]!;
+            if (px < -20 || px > w + 20 || py < -20 || py > h + 20) continue;
 
-          const breathe = Math.sin(time * 1.8 + p.phase) * 0.05;
-          const a = Math.max(0, p.alpha + breathe);
+            const breathe = Math.sin(time * 1.8 + p.phase) * 0.05;
+            const a = Math.max(0, p.alpha + breathe);
 
-          if (useSingleImg || useAllImgs) {
+            // Dot
+            ctx.beginPath();
+            ctx.arc(px, py, p.r, 0, Math.PI * 2);
+            ctx.fillStyle = `rgba(${baseColor}, ${a.toFixed(3)})`;
+            ctx.fill();
+
+            // Node ring
+            if (p.isNode) {
+              ctx.beginPath();
+              ctx.arc(px, py, p.r + 5, 0, Math.PI * 2);
+              ctx.strokeStyle = `rgba(${baseColor}, ${(a * 0.3).toFixed(3)})`;
+              ctx.lineWidth = 0.5;
+              ctx.stroke();
+            }
+
+            // Cross markers
+            if (p.idx % 7 === 0) {
+              ctx.beginPath();
+              ctx.moveTo(px - 6, py);
+              ctx.lineTo(px + 6, py);
+              ctx.moveTo(px, py - 6);
+              ctx.lineTo(px, py + 6);
+              ctx.strokeStyle = `rgba(${baseColor}, ${(a * 0.4).toFixed(3)})`;
+              ctx.lineWidth = 0.5;
+              ctx.stroke();
+            }
+          }
+        } else {
+          // Member image mode
+          for (let i = 0; i < group.length; i++) {
+            const p = group[i]!;
+            const px = rpx[i]!;
+            const py = rpy[i]!;
+            if (px < -20 || px > w + 20 || py < -20 || py > h + 20) continue;
+
+            const breathe = Math.sin(time * 1.8 + p.phase) * 0.05;
+            const a = Math.max(0, p.alpha + breathe);
+
             const img = useAllImgs
               ? allImgsRef.current[p.memberImgIdx]
               : memberImgRef.current!;
             if (!img || !img.complete || img.naturalWidth === 0) {
-              // Image not ready yet — draw a normal dot instead
               ctx.beginPath();
               ctx.arc(px, py, p.r * 0.4, 0, Math.PI * 2);
-              ctx.fillStyle = `rgba(${baseColor}, ${a})`;
+              ctx.fillStyle = `rgba(${baseColor}, ${a.toFixed(3)})`;
               ctx.fill();
               continue;
             }
@@ -355,37 +442,9 @@ export function ParallaxMoleculeCanvas({
 
             ctx.beginPath();
             ctx.arc(px, py, p.r + 2, 0, Math.PI * 2);
-            ctx.strokeStyle = `rgba(${baseColor}, ${a * 0.6})`;
+            ctx.strokeStyle = `rgba(${baseColor}, ${(a * 0.6).toFixed(3)})`;
             ctx.lineWidth = 0.5;
             ctx.stroke();
-          } else {
-            // Dot
-            ctx.beginPath();
-            ctx.arc(px, py, p.r, 0, Math.PI * 2);
-            ctx.fillStyle = `rgba(${baseColor}, ${a})`;
-            ctx.fill();
-
-            // Node ring
-            if (p.isNode) {
-              ctx.beginPath();
-              ctx.arc(px, py, p.r + 5, 0, Math.PI * 2);
-              ctx.strokeStyle = `rgba(${baseColor}, ${a * 0.3})`;
-              ctx.lineWidth = 0.5;
-              ctx.stroke();
-            }
-
-            // Cross markers (same pattern as original: every 7th particle)
-            if (p.idx % 7 === 0) {
-              const s = 6;
-              ctx.beginPath();
-              ctx.moveTo(px - s, py);
-              ctx.lineTo(px + s, py);
-              ctx.moveTo(px, py - s);
-              ctx.lineTo(px, py + s);
-              ctx.strokeStyle = `rgba(${baseColor}, ${a * 0.4})`;
-              ctx.lineWidth = 0.5;
-              ctx.stroke();
-            }
           }
         }
       }
