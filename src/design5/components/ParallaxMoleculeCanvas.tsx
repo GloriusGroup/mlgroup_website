@@ -76,6 +76,8 @@ interface Particle {
   idx: number;
   phase: number;
   memberImgIdx: number;
+  renderY: number;
+  hasCross: boolean;
 }
 
 interface LayerFrameBuffers {
@@ -87,6 +89,22 @@ interface LayerFrameBuffers {
 
 const IS_FIREFOX =
   typeof navigator !== "undefined" && /firefox/i.test(navigator.userAgent);
+const CANVAS_PERF_DEBUG =
+  typeof window !== "undefined" &&
+  new URLSearchParams(window.location.search).get("canvas_perf") === "1";
+
+const FIREFOX_QUALITY_PROFILES = [
+  { particleFraction: 0.62, lineFrameStride: 3, lineDistanceScale: 0, showDecorations: false },
+  { particleFraction: 0.82, lineFrameStride: 2, lineDistanceScale: 0.62, showDecorations: false },
+  { particleFraction: 1, lineFrameStride: 1, lineDistanceScale: 0.82, showDecorations: true },
+] as const;
+
+const FIREFOX_RENDER_INTERVALS = {
+  idle: 1000 / 40,
+  scroll: 1000 / 30,
+  fastScroll: 1000 / 24,
+  overloaded: 1000 / 18,
+} as const;
 
 export function ParallaxMoleculeCanvas({
   isDark,
@@ -105,6 +123,7 @@ export function ParallaxMoleculeCanvas({
   const memberLoadedRef = useRef(false);
   const allImgsRef = useRef<HTMLImageElement[]>([]);
   const allImgsLoadedRef = useRef(false);
+  const perfOverlayRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     if (ALL_MODE) {
@@ -146,11 +165,39 @@ export function ParallaxMoleculeCanvas({
 
     const isFirefox = IS_FIREFOX;
     const firefoxDensityScale = 0.72;
-    const firefoxConnectionScale = 0.82;
-    const minFrameTime = isFirefox ? 1000 / 30 : 0;
+    const firefoxRenderScale = 0.72;
+    const renderScale = isFirefox ? firefoxRenderScale : 1;
+    const minFrameTime = isFirefox ? 1000 / 40 : 0;
     const scrollOffsets = new Float32Array(LAYERS.length);
     const colorCache = new Map<number, string>();
+    const spriteCache = new Map<string, HTMLCanvasElement>();
+    const perfHost = window as Window & {
+      __parallaxCanvasPerf?: {
+        fps: number;
+        frameMs: number;
+        drawMs: number;
+        particles: number;
+        quality: number;
+        firefox: boolean;
+        scrolling: boolean;
+      };
+    };
     let lastFrameTime = 0;
+    let lastVisualRender = 0;
+    let frameCount = 0;
+    let fpsFrameCount = 0;
+    let fpsWindowStart = performance.now();
+    let currentFps = 0;
+    let emaFrameMs = 16.7;
+    let emaDrawMs = 8;
+    let qualityLevel = isFirefox ? 1 : 2;
+    let qualityCooldown = 0;
+    let scrollActiveUntil = 0;
+    let lastScrollEventTime = performance.now();
+    let lastScrollSampleY = window.scrollY;
+    let scrollVelocity = 0;
+    let viewportWidth = window.innerWidth;
+    let viewportHeight = window.innerHeight;
     let layerBuffers: LayerFrameBuffers[] = [];
 
     const toRgba = (alpha: number) => {
@@ -161,6 +208,48 @@ export function ParallaxMoleculeCanvas({
       const value = `rgba(${accentRgb}, ${(key / 1000).toFixed(3)})`;
       colorCache.set(key, value);
       return value;
+    };
+
+    const getParticleSprite = (radius: number, isNode: boolean, hasCross: boolean) => {
+      const key = `${Math.round(radius * 10)}:${isNode ? 1 : 0}:${hasCross ? 1 : 0}`;
+      const cached = spriteCache.get(key);
+      if (cached) return cached;
+
+      const pad = hasCross ? 8 : isNode ? 6 : 2;
+      const size = Math.ceil((radius + pad) * 2 + 2);
+      const sprite = document.createElement("canvas");
+      sprite.width = size;
+      sprite.height = size;
+      const spriteCtx = sprite.getContext("2d");
+      if (!spriteCtx) return sprite;
+
+      const center = size * 0.5;
+      spriteCtx.fillStyle = `rgb(${accentRgb})`;
+      spriteCtx.beginPath();
+      spriteCtx.arc(center, center, radius, 0, Math.PI * 2);
+      spriteCtx.fill();
+
+      if (isNode) {
+        spriteCtx.strokeStyle = `rgba(${accentRgb}, 0.3)`;
+        spriteCtx.lineWidth = 0.5;
+        spriteCtx.beginPath();
+        spriteCtx.arc(center, center, radius + 5, 0, Math.PI * 2);
+        spriteCtx.stroke();
+      }
+
+      if (hasCross) {
+        spriteCtx.strokeStyle = `rgba(${accentRgb}, 0.4)`;
+        spriteCtx.lineWidth = 0.5;
+        spriteCtx.beginPath();
+        spriteCtx.moveTo(center - 6, center);
+        spriteCtx.lineTo(center + 6, center);
+        spriteCtx.moveTo(center, center - 6);
+        spriteCtx.lineTo(center, center + 6);
+        spriteCtx.stroke();
+      }
+
+      spriteCache.set(key, sprite);
+      return sprite;
     };
 
     const initParticles = (w: number, h: number) => {
@@ -187,6 +276,8 @@ export function ParallaxMoleculeCanvas({
             idx: i,
             phase: Math.random() * Math.PI * 2,
             memberImgIdx: ALL_MODE ? globalIdx % allMemberUrls.length : 0,
+            renderY: 0,
+            hasCross: i % 7 === 0,
           });
           globalIdx++;
         }
@@ -215,10 +306,16 @@ export function ParallaxMoleculeCanvas({
     };
 
     const resize = () => {
-      canvas.width = window.innerWidth;
-      canvas.height = window.innerHeight;
+      viewportWidth = window.innerWidth;
+      viewportHeight = window.innerHeight;
+      canvas.width = Math.max(1, Math.floor(viewportWidth * renderScale));
+      canvas.height = Math.max(1, Math.floor(viewportHeight * renderScale));
+      canvas.style.width = `${viewportWidth}px`;
+      canvas.style.height = `${viewportHeight}px`;
+      ctx.setTransform(renderScale, 0, 0, renderScale, 0, 0);
+      ctx.imageSmoothingEnabled = true;
       if (particlesRef.current.length === 0) {
-        initParticles(canvas.width, canvas.height);
+        initParticles(viewportWidth, viewportHeight);
         rebuildLayerGroups();
       }
     };
@@ -227,7 +324,15 @@ export function ParallaxMoleculeCanvas({
     window.addEventListener("resize", resize);
 
     const handleScroll = () => {
-      scrollRef.current = window.scrollY;
+      const nextY = window.scrollY;
+      const now = performance.now();
+      const delta = Math.abs(nextY - lastScrollSampleY);
+      const elapsed = Math.max(16, now - lastScrollEventTime);
+      scrollVelocity = (delta / elapsed) * 16.67;
+      scrollActiveUntil = now + 140;
+      lastScrollEventTime = now;
+      lastScrollSampleY = nextY;
+      scrollRef.current = nextY;
     };
     window.addEventListener("scroll", handleScroll, { passive: true });
 
@@ -242,17 +347,34 @@ export function ParallaxMoleculeCanvas({
     document.addEventListener("mouseleave", handleMouseLeave);
 
     const animate = (timestamp: number) => {
-      if (minFrameTime > 0 && timestamp - lastFrameTime < minFrameTime) {
+      const now = performance.now();
+      const isScrollActive = now < scrollActiveUntil;
+      const firefoxRenderInterval = !isFirefox
+        ? 0
+        : emaDrawMs > 28
+          ? FIREFOX_RENDER_INTERVALS.overloaded
+          : isScrollActive
+            ? scrollVelocity > 90
+              ? FIREFOX_RENDER_INTERVALS.fastScroll
+              : FIREFOX_RENDER_INTERVALS.scroll
+            : FIREFOX_RENDER_INTERVALS.idle;
+      const minRenderInterval = Math.max(minFrameTime, firefoxRenderInterval);
+      if (minRenderInterval > 0 && timestamp - lastVisualRender < minRenderInterval) {
         animationRef.current = requestAnimationFrame(animate);
         return;
       }
+
+      lastVisualRender = timestamp;
       const deltaMs = lastFrameTime === 0 ? 1000 / 60 : Math.min(100, timestamp - lastFrameTime);
       const frameScale = Math.min(2.5, deltaMs / (1000 / 60));
       const damping = Math.pow(0.985, frameScale);
       lastFrameTime = timestamp;
+      const drawStart = performance.now();
+      frameCount++;
+      fpsFrameCount++;
 
-      const w = canvas.width;
-      const h = canvas.height;
+      const w = viewportWidth;
+      const h = viewportHeight;
       ctx.clearRect(0, 0, w, h);
 
       const particles = particlesRef.current;
@@ -273,18 +395,31 @@ export function ParallaxMoleculeCanvas({
         return ((raw % wrapH) + wrapH) % wrapH - buf;
       };
 
+      for (let i = 0; i < particles.length; i++) {
+        particles[i]!.renderY = renderedY(particles[i]!);
+      }
+
       // --- Physics (per-layer to skip cross-layer checks) ---
       const repelDist = 30;
       const repelDistSq = repelDist * repelDist;
+      const effectiveQualityLevel = isFirefox
+        ? isScrollActive
+          ? scrollVelocity > 90
+            ? Math.min(qualityLevel, 1)
+            : qualityLevel
+          : qualityLevel
+        : 2;
+      const qualityProfile = FIREFOX_QUALITY_PROFILES[effectiveQualityLevel];
       for (let li = 0; li < LAYERS.length; li++) {
         const group = layerGroups[li]!;
-        for (let i = 0; i < group.length; i++) {
+        const activeCount = Math.max(3, Math.floor(group.length * qualityProfile.particleFraction));
+        for (let i = 0; i < activeCount; i++) {
           const pI = group[i]!;
-          for (let j = i + 1; j < group.length; j++) {
+          for (let j = i + 1; j < activeCount; j++) {
             const pJ = group[j]!;
             const ddx = pI.x - pJ.x;
             if (ddx > repelDist || ddx < -repelDist) continue; // early-out
-            const ddy = renderedY(pI) - renderedY(pJ);
+            const ddy = pI.renderY - pJ.renderY;
             if (ddy > repelDist || ddy < -repelDist) continue;
             const ddSq = ddx * ddx + ddy * ddy;
             if (ddSq < repelDistSq && ddSq > 0) {
@@ -310,9 +445,8 @@ export function ParallaxMoleculeCanvas({
         const p = particles[i]!;
         // Mouse repulsion
         if (mouseActive) {
-          const ry = renderedY(p);
           const dx = p.x - mouse.x;
-          const dy = ry - mouse.y;
+          const dy = p.renderY - mouse.y;
           const distSq = dx * dx + dy * dy;
           if (distSq < repelRSq && distSq > 0) {
             const dist = Math.sqrt(distSq);
@@ -324,8 +458,7 @@ export function ParallaxMoleculeCanvas({
 
         // Edge repulsion in hero viewport
         if (edgeZone > 0) {
-          const ry = renderedY(p);
-          if (ry - scrollY > -50 && ry - scrollY < h) {
+          if (p.renderY - scrollY > -50 && p.renderY - scrollY < h) {
             if (p.x < edgeZone) {
               const t = 1 - p.x / edgeZone;
               p.vx += t * t * 0.15 * frameScale;
@@ -348,6 +481,7 @@ export function ParallaxMoleculeCanvas({
         if (p.x > w + 50) p.x -= w + 100;
         if (p.y < -buf) p.y += wrapH;
         if (p.y > h + buf) p.y -= wrapH;
+        p.renderY = renderedY(p);
       }
 
       // --- Render layers far → near (painter's order) ---
@@ -360,14 +494,19 @@ export function ParallaxMoleculeCanvas({
         const buffers = layerBuffers[li]!;
         const rpx = buffers.x;
         const rpy = buffers.y;
-        const connDist = cfg.connectionDist * (isFirefox ? firefoxConnectionScale : 1);
+        const activeCount = Math.max(3, Math.floor(group.length * qualityProfile.particleFraction));
+        const shouldDrawLines =
+          !isScrollActive &&
+          qualityProfile.lineDistanceScale > 0 &&
+          frameCount % qualityProfile.lineFrameStride === 0;
+        const connDist = cfg.connectionDist * qualityProfile.lineDistanceScale;
         const connDistSq = connDist * connDist;
         const avgAlpha = (cfg.alphaRange[0] + cfg.alphaRange[1]) * 0.5;
 
         // Compute rendered positions into a reusable buffer
-        for (let i = 0; i < group.length; i++) {
+        for (let i = 0; i < activeCount; i++) {
           rpx[i] = group[i]!.x;
-          rpy[i] = renderedY(group[i]!);
+          rpy[i] = group[i]!.renderY;
         }
 
         // Batch connections by approximate alpha without allocating per-frame objects.
@@ -376,26 +515,28 @@ export function ParallaxMoleculeCanvas({
         bucketCounts[1] = 0;
         bucketCounts[2] = 0;
         bucketCounts[3] = 0;
-        for (let i = 0; i < group.length; i++) {
-          const ax = rpx[i]!;
-          const ay = rpy[i]!;
-          for (let j = i + 1; j < group.length; j++) {
-            const dx = ax - rpx[j]!;
-            if (dx > connDist || dx < -connDist) continue;
-            const dy = ay - rpy[j]!;
-            if (dy > connDist || dy < -connDist) continue;
-            const distSq = dx * dx + dy * dy;
-            if (distSq < connDistSq) {
-              const dist = Math.sqrt(distSq);
-              const alpha = (1 - dist / connDist) * avgAlpha;
-              const bucket = Math.min(3, (alpha * 4) | 0);
-              const lineBuffer = buffers.lineBuckets[bucket]!;
-              const offset = bucketCounts[bucket] * 4;
-              lineBuffer[offset] = ax;
-              lineBuffer[offset + 1] = ay;
-              lineBuffer[offset + 2] = rpx[j]!;
-              lineBuffer[offset + 3] = rpy[j]!;
-              bucketCounts[bucket]++;
+        if (shouldDrawLines) {
+          for (let i = 0; i < activeCount; i++) {
+            const ax = rpx[i]!;
+            const ay = rpy[i]!;
+            for (let j = i + 1; j < activeCount; j++) {
+              const dx = ax - rpx[j]!;
+              if (dx > connDist || dx < -connDist) continue;
+              const dy = ay - rpy[j]!;
+              if (dy > connDist || dy < -connDist) continue;
+              const distSq = dx * dx + dy * dy;
+              if (distSq < connDistSq) {
+                const dist = Math.sqrt(distSq);
+                const alpha = (1 - dist / connDist) * avgAlpha;
+                const bucket = Math.min(3, (alpha * 4) | 0);
+                const lineBuffer = buffers.lineBuckets[bucket]!;
+                const offset = bucketCounts[bucket] * 4;
+                lineBuffer[offset] = ax;
+                lineBuffer[offset + 1] = ay;
+                lineBuffer[offset + 2] = rpx[j]!;
+                lineBuffer[offset + 3] = rpy[j]!;
+                bucketCounts[bucket]++;
+              }
             }
           }
         }
@@ -417,10 +558,8 @@ export function ParallaxMoleculeCanvas({
         }
 
         // Particles
-        // Batch normal dots into a single path
         if (!useSingleImg && !useAllImgs) {
-          // Collect dots, node rings, and crosses by alpha
-          for (let i = 0; i < group.length; i++) {
+          for (let i = 0; i < activeCount; i++) {
             const p = group[i]!;
             const px = rpx[i]!;
             const py = rpy[i]!;
@@ -429,36 +568,44 @@ export function ParallaxMoleculeCanvas({
             const breathe = Math.sin(time * 1.8 + p.phase) * 0.05;
             const a = Math.max(0, p.alpha + breathe);
 
-            // Dot
-            ctx.beginPath();
-            ctx.arc(px, py, p.r, 0, Math.PI * 2);
-            ctx.fillStyle = toRgba(a);
-            ctx.fill();
-
-            // Node ring
-            if (p.isNode) {
+            if (isFirefox) {
+              const sprite = getParticleSprite(
+                p.r,
+                qualityProfile.showDecorations && p.isNode,
+                qualityProfile.showDecorations && p.hasCross,
+              );
+              ctx.globalAlpha = a;
+              ctx.drawImage(sprite, px - sprite.width * 0.5, py - sprite.height * 0.5);
+              ctx.globalAlpha = 1;
+            } else {
+              ctx.fillStyle = toRgba(a);
               ctx.beginPath();
-              ctx.arc(px, py, p.r + 5, 0, Math.PI * 2);
-              ctx.strokeStyle = toRgba(a * 0.3);
-              ctx.lineWidth = 0.5;
-              ctx.stroke();
-            }
+              ctx.arc(px, py, p.r, 0, Math.PI * 2);
+              ctx.fill();
 
-            // Cross markers
-            if (p.idx % 7 === 0) {
-              ctx.beginPath();
-              ctx.moveTo(px - 6, py);
-              ctx.lineTo(px + 6, py);
-              ctx.moveTo(px, py - 6);
-              ctx.lineTo(px, py + 6);
-              ctx.strokeStyle = toRgba(a * 0.4);
-              ctx.lineWidth = 0.5;
-              ctx.stroke();
+              if (qualityProfile.showDecorations && p.isNode) {
+                ctx.beginPath();
+                ctx.arc(px, py, p.r + 5, 0, Math.PI * 2);
+                ctx.strokeStyle = toRgba(a * 0.3);
+                ctx.lineWidth = 0.5;
+                ctx.stroke();
+              }
+
+              if (qualityProfile.showDecorations && p.hasCross) {
+                ctx.beginPath();
+                ctx.moveTo(px - 6, py);
+                ctx.lineTo(px + 6, py);
+                ctx.moveTo(px, py - 6);
+                ctx.lineTo(px, py + 6);
+                ctx.strokeStyle = toRgba(a * 0.4);
+                ctx.lineWidth = 0.5;
+                ctx.stroke();
+              }
             }
           }
         } else {
           // Member image mode
-          for (let i = 0; i < group.length; i++) {
+          for (let i = 0; i < activeCount; i++) {
             const p = group[i]!;
             const px = rpx[i]!;
             const py = rpy[i]!;
@@ -499,6 +646,50 @@ export function ParallaxMoleculeCanvas({
         }
       }
 
+      const drawMs = performance.now() - drawStart;
+      emaFrameMs = emaFrameMs * 0.92 + deltaMs * 0.08;
+      emaDrawMs = emaDrawMs * 0.92 + drawMs * 0.08;
+
+      if (timestamp - fpsWindowStart >= 1000) {
+        currentFps = (fpsFrameCount * 1000) / (timestamp - fpsWindowStart);
+        fpsFrameCount = 0;
+        fpsWindowStart = timestamp;
+      }
+
+      if (isFirefox) {
+        if (qualityCooldown > 0) qualityCooldown--;
+        if (qualityCooldown === 0 && emaDrawMs > 24 && qualityLevel > 0) {
+          qualityLevel--;
+          qualityCooldown = 90;
+        } else if (qualityCooldown === 0 && emaDrawMs < 14 && currentFps > 27 && qualityLevel < 2) {
+          qualityLevel++;
+          qualityCooldown = 180;
+        }
+      }
+
+      const qualityProfileForStats = isFirefox
+        ? FIREFOX_QUALITY_PROFILES[effectiveQualityLevel]
+        : FIREFOX_QUALITY_PROFILES[2];
+      const visibleParticles = layerGroups.reduce(
+        (sum, group) => sum + Math.max(3, Math.floor(group.length * qualityProfileForStats.particleFraction)),
+        0,
+      );
+
+      perfHost.__parallaxCanvasPerf = {
+        fps: Number(currentFps.toFixed(1)),
+        frameMs: Number(emaFrameMs.toFixed(1)),
+        drawMs: Number(emaDrawMs.toFixed(1)),
+        particles: visibleParticles,
+        quality: effectiveQualityLevel,
+        firefox: isFirefox,
+        scrolling: isScrollActive,
+      };
+
+      if (CANVAS_PERF_DEBUG && perfOverlayRef.current) {
+        perfOverlayRef.current.textContent =
+          `canvas ${currentFps.toFixed(0)} fps | ${emaDrawMs.toFixed(1)} ms draw | q${effectiveQualityLevel} | ${visibleParticles} p${isScrollActive ? " | scroll" : ""}`;
+      }
+
       animationRef.current = requestAnimationFrame(animate);
     };
 
@@ -513,5 +704,27 @@ export function ParallaxMoleculeCanvas({
     };
   }, [isDark, accentRgb]);
 
-  return <canvas ref={canvasRef} id="molecule-canvas" />;
+  return (
+    <>
+      <canvas ref={canvasRef} id="molecule-canvas" />
+      {CANVAS_PERF_DEBUG ? (
+        <div
+          ref={perfOverlayRef}
+          style={{
+            position: "fixed",
+            right: "12px",
+            bottom: "12px",
+            zIndex: 200,
+            padding: "6px 8px",
+            borderRadius: "6px",
+            background: "rgba(0, 0, 0, 0.72)",
+            color: "#fff",
+            font: "12px/1.2 ui-monospace, SFMono-Regular, Menlo, monospace",
+            pointerEvents: "none",
+            whiteSpace: "nowrap",
+          }}
+        />
+      ) : null}
+    </>
+  );
 }
