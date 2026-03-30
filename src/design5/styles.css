@@ -20,8 +20,8 @@
   --nav-border: rgba(var(--accent-rgb), 0.1);
   --scrollbar-thumb: rgba(var(--accent-rgb), 0.3);
   --scrollbar-track: rgba(7, 19, 24, 0.5);
-  --font-heading: "Hanken Grotesk", "Helvetica Neue", sans-serif;
-  --font-mono: "DM Mono", "Consolas", monospace;
+  --font-heading: "Aptos", "Avenir Next", "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+  --font-mono: "SF Mono", "Cascadia Code", "IBM Plex Mono", "Consolas", monospace;
   --transition: 0.25s ease;
 }
 
@@ -39,8 +39,8 @@
   --nav-border: rgba(239, 68, 68, 0.12);
   --scrollbar-thumb: rgba(239, 68, 68, 0.3);
   --scrollbar-track: rgba(15, 5, 5, 0.5);
-  --font-heading: "Hanken Grotesk", "Helvetica Neue", sans-serif;
-  --font-mono: "DM Mono", "Consolas", monospace;
+  --font-heading: "Aptos", "Avenir Next", "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+  --font-mono: "SF Mono", "Cascadia Code", "IBM Plex Mono", "Consolas", monospace;
   --transition: 0.25s ease;
 } */
 /* ---------- Light Mode ---------- */
@@ -832,16 +832,21 @@ button:focus-visible {
 .publications-list {
   display: flex;
   flex-direction: column;
-  gap: 1.5rem;
+  gap: 1rem;
 }
 
 .pub-year-group {
-  border-top: 1px solid rgba(var(--accent-rgb), 0.14);
-  padding-top: 0.35rem;
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
+  border-radius: 8px;
+  backdrop-filter: blur(12px);
+  transition: border-color var(--transition), box-shadow var(--transition);
 }
 
+.pub-year-group:hover,
 .pub-year-group[open] {
-  border-top-color: rgba(var(--accent-rgb), 0.3);
+  border-color: rgba(var(--accent-rgb), 0.24);
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.12);
 }
 
 .pub-year-group__summary {
@@ -850,7 +855,7 @@ button:focus-visible {
   align-items: center;
   justify-content: space-between;
   gap: 1rem;
-  padding: 0.8rem 0;
+  padding: 1rem 1.25rem;
   cursor: pointer;
 }
 
@@ -895,16 +900,14 @@ button:focus-visible {
 .pub-year-group__items {
   display: flex;
   flex-direction: column;
-  gap: 0.3rem;
-  padding: 0 0 0.3rem 0;
+  padding: 0 1.25rem 0.35rem;
 }
 
 .pub-card {
   background: transparent;
-  border: 0;
-  border-left: 2px solid rgba(var(--accent-rgb), 0.14);
-  border-radius: 0;
-  padding: 1rem 0 1rem 1.15rem;
+  border: 2px solid transparent;
+  border-radius: 6px;
+  padding: calc(1rem - 1px) 0;
   display: flex;
   gap: 0.85rem;
   align-items: flex-start;
@@ -914,10 +917,14 @@ button:focus-visible {
   cursor: pointer;
 }
 
+.pub-card + .pub-card {
+  border-top: 1px solid rgba(var(--accent-rgb), 0.1);
+}
+
 .pub-card:hover {
-  border-left-color: rgba(var(--accent-rgb), 0.5);
-  background: linear-gradient(90deg, rgba(var(--accent-rgb), 0.055), transparent 68%);
-  transform: translateX(4px);
+  border-color: rgba(var(--accent-rgb), 0.38);
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.15);
+  transform: translateY(-3px);
 }
 
 .pub-card__year {
@@ -1022,6 +1029,9 @@ button:focus-visible {
   text-align: center;
   transition: all var(--transition);
   position: relative;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
 }
 
 .team-card:hover {
@@ -1080,6 +1090,7 @@ button:focus-visible {
   line-height: 1.6;
   margin-bottom: 0.75rem;
   font-weight: 300;
+  flex: 1;
 }
 
 .team-card__badge {
@@ -1100,6 +1111,8 @@ button:focus-visible {
   justify-content: center;
   gap: 0.6rem;
   flex-wrap: wrap;
+  margin-top: auto;
+  min-height: 30px;
 }
 
 .team-card__links a {
@@ -1413,11 +1426,11 @@ button:focus-visible {
 }
 
 .alt-theme .pub-card:hover {
-  border-left-color: rgba(200, 16, 46, 0.42);
+  border-color: rgba(200, 16, 46, 0.35);
 }
 
 .alt-theme .pub-year-group[open] {
-  border-top-color: rgba(200, 16, 46, 0.25);
+  border-color: rgba(200, 16, 46, 0.25);
 }
 
 .alt-theme .team-card:hover {
@@ -1626,7 +1639,7 @@ button:focus-visible {
   }
 
   .pub-year-group__summary {
-    padding: 0.9rem 0;
+    padding: 0.9rem 1rem;
   }
 
   .pub-year-group__heading {
@@ -1636,11 +1649,7 @@ button:focus-visible {
   }
 
   .pub-year-group__items {
-    padding: 0 0 0.65rem;
-  }
-
-  .pub-card {
-    padding-left: 0.85rem;
+    padding: 0 1rem 0.65rem;
   }
 
   .pub-card__year {
