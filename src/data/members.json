@@ -23,15 +23,17 @@
   },
   {
     "name": "Dr. Felix Katzenburg",
-    "role": "PhD Student",
+    "role": "Alumnus",
     "image": "felix_katzenburg.png",
-    "email": "felix.katzenburg@uni-muenster.de",
-    "description": "Developer of pyGecko for calibration-free GC-MS/FID quantification and automated high-throughput reaction screening. Co-developed evolutionary algorithms for interpretable molecular representations.",
+    "email": "",
+    "description": "Former PhD student in the ML group. Current position: University of Toronto. Worked on pyGecko for calibration-free GC-MS/FID quantification and automated high-throughput reaction screening.",
     "links": {
       "github": "https://github.com/FelixKatz77",
       "linkedin": "https://www.linkedin.com/in/felix-katzenburg-8900b9225/",
-      "orcid": "https://orcid.org/0000-0003-3053-4911"
-    }
+      "orcid": "https://orcid.org/0000-0003-3053-4911",
+      "x": "https://x.com/FKatzenburg"
+    },
+    "section": "alumni"
   },
   {
     "name": "Florian Boser",
@@ -128,5 +130,39 @@
     "links": {
       "linkedin": "https://www.linkedin.com/in/nick-wierich/"
     }
+  },
+  {
+    "name": "Philipp Pflüger",
+    "role": "Alumnus",
+    "image": "philipp_pflueger.png",
+    "email": "",
+    "description": "Former PhD student in the ML group. Current position: CEO, Cheminnovation GmbH.",
+    "links": {
+      "linkedin": "https://www.linkedin.com/in/philipp-m-pfl%C3%BCger-1067a41a6/"
+    },
+    "section": "alumni"
+  },
+  {
+    "name": "Tobias Elsbecker",
+    "role": "Alumnus",
+    "image": "tobias_elsbecker.png",
+    "email": "",
+    "description": "Former data scientist in the ML group. Current position: CTO, Cheminnovation GmbH.",
+    "links": {
+      "linkedin": "https://www.linkedin.com/in/tobiaselsbecker"
+    },
+    "section": "alumni"
+  },
+  {
+    "name": "Dr. Marius Kühnemund",
+    "role": "Alumnus",
+    "image": "marius_kuehnemund.png",
+    "email": "",
+    "description": "Former data scientist in the ML group. Current position: Senior ML Engineer, syte GmbH.",
+    "links": {
+      "scholar": "https://scholar.google.de/citations?hl=de&user=g6f-fokAAAAJ",
+      "linkedin": "https://www.linkedin.com/in/marius-k%C3%BChnemund-1b677b225/"
+    },
+    "section": "alumni"
   }
 ]

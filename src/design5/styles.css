@@ -936,6 +936,18 @@ button:focus-visible {
   gap: 1.25rem;
 }
 
+.team-subsection {
+  margin-top: 3rem;
+}
+
+.team-subsection__heading {
+  font-family: var(--font-heading);
+  font-size: 1.45rem;
+  font-weight: 600;
+  color: var(--text);
+  margin: 0.35rem 0 1.25rem;
+}
+
 .team-card {
   background: var(--card-bg);
   border: 1px solid var(--card-border);

@@ -1,15 +1,18 @@
-import frank_glorius from "./frank_glorius.png";
-import ajnabiul_hoque from "./ajnabiul_hoque.png";
-import felix_katzenburg from "./felix_katzenburg.png";
-import florian_boser from "./florian_boser.png";
-import niklas_dobberstein from "./niklas_dobberstein.png";
-import niklas_hoelter from "./niklas_hoelter.png";
-import maik_niedziella from "./maik_niedziella.png";
-import debanjan_rana from "./debanjan_rana.png";
-import leon_schlosser from "./leon_schlosser.png";
-import jan_spies from "./jan_spies.png";
-import manh_hung_tran from "./manh_hung_tran.png";
-import nick_wierich from "./nick_wierich.png";
+import frank_glorius from "./frank_glorius.webp";
+import ajnabiul_hoque from "./ajnabiul_hoque.webp";
+import felix_katzenburg from "./felix_katzenburg.webp";
+import florian_boser from "./florian_boser.webp";
+import niklas_dobberstein from "./niklas_dobberstein.webp";
+import niklas_hoelter from "./niklas_hoelter.webp";
+import maik_niedziella from "./maik_niedziella.webp";
+import debanjan_rana from "./debanjan_rana.webp";
+import leon_schlosser from "./leon_schlosser.webp";
+import jan_spies from "./jan_spies.webp";
+import manh_hung_tran from "./manh_hung_tran.webp";
+import nick_wierich from "./nick_wierich.webp";
+import philipp_pflueger from "./philipp_pflueger.webp";
+import tobias_elsbecker from "./tobias_elsbecker.webp";
+import marius_kuehnemund from "./marius_kuehnemund.webp";
 
 export const memberImages: Record<string, string> = {
   "frank_glorius.png": frank_glorius,
@@ -24,13 +27,15 @@ export const memberImages: Record<string, string> = {
   "jan_spies.png": jan_spies,
   "manh_hung_tran.png": manh_hung_tran,
   "nick_wierich.png": nick_wierich,
+  "philipp_pflueger.png": philipp_pflueger,
+  "tobias_elsbecker.png": tobias_elsbecker,
+  "marius_kuehnemund.png": marius_kuehnemund,
 };
 
 /** 3-letter shortcodes for the ?member= easter egg */
 export const memberCodes: Record<string, string> = {
   FGL: frank_glorius,
   AHQ: ajnabiul_hoque,
-  FKB: felix_katzenburg,
   FBS: florian_boser,
   NDO: niklas_dobberstein,
   NHO: niklas_hoelter,
@@ -46,7 +51,6 @@ export const memberCodes: Record<string, string> = {
 export const allMemberUrls: string[] = [
   frank_glorius,
   ajnabiul_hoque,
-  felix_katzenburg,
   florian_boser,
   niklas_dobberstein,
   niklas_hoelter,

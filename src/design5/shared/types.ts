@@ -5,6 +5,7 @@ export interface Member {
   email: string;
   description: string;
   links: Record<string, string>;
+  section?: "current" | "alumni";
 }
 
 export interface Project {

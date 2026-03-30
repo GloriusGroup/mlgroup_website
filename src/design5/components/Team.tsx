@@ -28,7 +28,7 @@ function TeamCard({ member, index, useAltTheme }: { member: Member; index: numbe
         }
       >
         {hasImage ? (
-          <img src={resolvedImage} alt={member.name} />
+          <img src={resolvedImage} alt={member.name} loading="lazy" decoding="async" />
         ) : (
           getInitials(member.name)
         )}
@@ -70,6 +70,8 @@ function TeamCard({ member, index, useAltTheme }: { member: Member; index: numbe
 export function Team({ useAltTheme }: { useAltTheme: boolean }) {
   const ref = useScrollReveal();
   const members = membersData as Member[];
+  const currentMembers = members.filter((member) => member.section !== "alumni");
+  const alumni = members.filter((member) => member.section === "alumni");
 
   return (
     <section className="section" id="team" ref={ref}>
@@ -78,10 +80,26 @@ export function Team({ useAltTheme }: { useAltTheme: boolean }) {
         <h2 className="section__heading">Our Researchers</h2>
       </div>
       <div className="team-grid">
-        {members.map((m, i) => (
+        {currentMembers.map((m, i) => (
           <TeamCard key={m.name} member={m} index={i} useAltTheme={useAltTheme} />
         ))}
       </div>
+      {alumni.length > 0 ? (
+        <div className="team-subsection reveal reveal-delay-2">
+          <div className="section__label">ALUMNI</div>
+          <h3 className="team-subsection__heading">Machine Learning Alumni</h3>
+          <div className="team-grid team-grid--alumni">
+            {alumni.map((member, index) => (
+              <TeamCard
+                key={member.name}
+                member={member}
+                index={index}
+                useAltTheme={useAltTheme}
+              />
+            ))}
+          </div>
+        </div>
+      ) : null}
     </section>
   );
 }

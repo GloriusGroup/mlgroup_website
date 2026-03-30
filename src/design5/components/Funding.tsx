@@ -1,10 +1,10 @@
 import { useScrollReveal } from "../shared/hooks";
 import { ExternalLinkIcon } from "../shared/icons";
 
-import spp2363Logo from "../assets/funding/spp2363.jpg";
-import efrelogo from "../assets/funding/efre_eu_nrw.png";
-import ercLogo from "../assets/funding/erc.jpeg";
-import fciLogo from "../assets/funding/logofci.png";
+import spp2363Logo from "../assets/funding/spp2363.webp";
+import efrelogo from "../assets/funding/efre_eu_nrw.webp";
+import ercLogo from "../assets/funding/erc.webp";
+import fciLogo from "../assets/funding/logofci.webp";
 
 
 interface Funder {
@@ -57,7 +57,7 @@ export function Funding() {
           const inner = (
             <>
               <div className="funding-card__logo">
-                <img src={f.logo} alt={f.name} />
+                <img src={f.logo} alt={f.name} loading="lazy" decoding="async" />
               </div>
               <div className="funding-card__body">
                 <h3 className="funding-card__name">

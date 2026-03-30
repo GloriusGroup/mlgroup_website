@@ -1,10 +1,10 @@
-import pygecko from "./pygecko.png";
-import payn from "./payn.png";
-import gpuma from "./gpuma.png";
-import invent from "./invent.jpg";
-import entdecker from "./entdecker.png";
-import substrate_selection from "./substrate_selection.jpeg";
-import easychml from "./easychml.jpg";
+import pygecko from "./pygecko.webp";
+import payn from "./payn.webp";
+import gpuma from "./gpuma.webp";
+import invent from "./invent.webp";
+import entdecker from "./entdecker.webp";
+import substrate_selection from "./substrate_selection.webp";
+import easychml from "./easychml.webp";
 
 // Map from the local filename (used in projects.json "image" field) to the bundled URL
 export const projectImages: Record<string, string> = {

@@ -4,7 +4,6 @@ import posthog from "posthog-js";
 import { PostHogProvider } from "posthog-js/react";
 import "./styles.css";
 
-import { CircuitBackground } from "./components/CircuitBackground";
 import { MoleculeCanvas } from "./components/MoleculeCanvas";
 import { ParallaxMoleculeCanvas } from "./components/ParallaxMoleculeCanvas";
 import { Nav } from "./components/Nav";
@@ -21,8 +20,8 @@ import { ACCENT_PRESETS } from "./shared/accents";
 // Experimental feature flags (URL params)
 const PARALLAX_MODE = true; //new URLSearchParams(window.location.search).get("parallax") === "true";
 
-// Background mode: "grid" (default), "circuit", "dots", "hexagons", "circuit-board", "none"
-const BG_MODE: "grid" | "circuit" | "dots" | "hexagons" | "circuit-board" | "none" = "circuit-board";
+// Background mode: "grid" (default), "dots", "hexagons", "circuit-board", "none"
+const BG_MODE: "grid" | "dots" | "hexagons" | "circuit-board" | "none" = "circuit-board";
 
 // Set after successful posthog.init()
 let posthogInitialized = false;
@@ -84,9 +83,6 @@ function App() {
 
   return (
     <>
-      {BG_MODE === "circuit" && (
-        <CircuitBackground isDark={isDark} accentRgb={currentAccentRgb} />
-      )}
       <div className="hero-bg-cover" aria-hidden="true" />
       {PARALLAX_MODE ? (
         <ParallaxMoleculeCanvas isDark={isDark} accentRgb={currentAccentRgb} />

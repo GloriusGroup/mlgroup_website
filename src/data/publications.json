@@ -88,5 +88,35 @@
     "pages": "e202204647",
     "doi": "https://doi.org/10.1002/anie.202204647",
     "tags": ["failed experiments", "negative data", "reactivity"]
+  },
+  {
+    "title": "Molecular Machine Learning: The Future of Synthetic Chemistry?",
+    "authors": ["P. M. Pflüger", "F. Glorius"],
+    "journal": "Angew. Chem. Int. Ed.",
+    "year": 2020,
+    "volume": "59",
+    "pages": "18860–18865",
+    "doi": "https://doi.org/10.1002/anie.202008366",
+    "tags": ["machine learning", "synthetic chemistry", "perspective"]
+  },
+  {
+    "title": "Machine Learning the Ropes: Principles, Applications and Directions in Synthetic Chemistry",
+    "authors": ["F. Strieth-Kalthoff", "F. Sandfort", "M. H. S. Segler", "F. Glorius"],
+    "journal": "Chem. Soc. Rev.",
+    "year": 2020,
+    "volume": "49",
+    "pages": "6154–6168",
+    "doi": "https://doi.org/10.1039/C9CS00786E",
+    "tags": ["machine learning", "synthetic chemistry", "review"]
+  },
+  {
+    "title": "A Structure-Based Platform for Predicting Chemical Reactivity",
+    "authors": ["F. Sandfort", "F. Strieth-Kalthoff", "M. Kühnemund", "C. Beecks", "F. Glorius"],
+    "journal": "Chem",
+    "year": 2020,
+    "volume": "6",
+    "pages": "1379–1390",
+    "doi": "https://doi.org/10.1016/j.chempr.2020.02.017",
+    "tags": ["reactivity prediction", "machine learning", "molecular representation"]
   }
 ]
