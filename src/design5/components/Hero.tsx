@@ -8,6 +8,7 @@ export function Hero() {
 
   return (
     <section className="hero">
+      <div className="hero__traces hero__traces--right" aria-hidden="true" />
       <div className="hero__label">DATA SCIENCE SUBGROUP</div>
       <h1 className="hero__title">
         Machine Learning<br />

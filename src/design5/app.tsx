@@ -101,6 +101,7 @@ function App() {
       {BG_MODE === "circuit" && (
         <CircuitBackground isDark={isDark} accentRgb={currentAccentRgb} />
       )}
+      <div className="hero-bg-cover" aria-hidden="true" />
       {PARALLAX_MODE ? (
         <ParallaxMoleculeCanvas isDark={isDark} accentRgb={currentAccentRgb} />
       ) : (
