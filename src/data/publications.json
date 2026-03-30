@@ -1,5 +1,25 @@
 [
   {
+    "title": "Inverse Molecular Design for the Discovery of Organic Energy Transfer Photocatalysts: Bridging Global and Local Chemical Space Exploration",
+    "authors": ["L. Schlosser", "N. H. Rendel", "J. Gemen", "F. Glorius", "K. Jorner"],
+    "journal": "J. Am. Chem. Soc.",
+    "year": 2026,
+    "volume": "148",
+    "pages": "6451–6461",
+    "doi": "https://doi.org/10.1021/jacs.5c20087",
+    "tags": ["inverse design", "energy transfer", "photocatalysis"]
+  },
+  {
+    "title": "Data-Centric Path to Autonomous Chemical Discovery",
+    "authors": ["F. Boser", "F. Glorius", "A. I. Cooper"],
+    "journal": "Proc. 27th Solvay Conf. Chem.",
+    "year": 2025,
+    "volume": "",
+    "pages": "",
+    "doi": "https://solvayinstitutes.be/wp-content/uploads/2025/09/Frank-Glorius.pdf",
+    "tags": ["autonomous discovery", "data-centric", "perspective"]
+  },
+  {
     "title": "Accelerated Discovery of Energy Transfer-Catalyzed Dearomative Cycloadditions through a Data-Driven Three-Layer Screening Strategy",
     "authors": ["D. Rana", "et al."],
     "journal": "J. Am. Chem. Soc.",
