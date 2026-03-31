@@ -313,6 +313,7 @@ button:focus-visible {
   height: 100vh;
   z-index: 0;
   pointer-events: none;
+  will-change: transform;
 }
 
 /* ---------- Content Layer ---------- */
@@ -524,8 +525,8 @@ button:focus-visible {
 .hero__subtitle {
   font-family: var(--font-mono);
   font-size: clamp(0.85rem, 1.5vw, 1rem);
-  font-weight: 300;
-  color: var(--text-muted);
+  font-weight: 400;
+  color: var(--text);
   max-width: 520px;
   margin-top: 1.25rem;
   line-height: 1.6;
@@ -770,9 +771,9 @@ button:focus-visible {
 
 .project-card__desc {
   font-size: 0.88rem;
-  color: var(--text-muted);
+  color: var(--text);
   line-height: 1.65;
-  font-weight: 300;
+  font-weight: 400;
   flex: 1;
   margin-bottom: 1rem;
 }
@@ -1086,10 +1087,10 @@ button:focus-visible {
 
 .team-card__desc {
   font-size: 0.85rem;
-  color: var(--text-muted);
+  color: var(--text);
   line-height: 1.6;
   margin-bottom: 0.75rem;
-  font-weight: 300;
+  font-weight: 400;
   flex: 1;
 }
 
@@ -1239,6 +1240,216 @@ button:focus-visible {
   font-weight: 300;
 }
 
+/* ---------- Symposiums Section ---------- */
+.symp__intro {
+  font-size: 0.92rem;
+  color: var(--text);
+  margin-bottom: 2rem;
+  font-weight: 400;
+  line-height: 1.6;
+  max-width: 640px;
+}
+
+/* Symposiums grid */
+.symp-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 1rem;
+}
+
+.symp-card {
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
+  border-radius: 8px;
+  overflow: hidden;
+  cursor: pointer;
+  transition: all var(--transition);
+  padding: 0;
+  text-align: left;
+  color: inherit;
+  font: inherit;
+}
+
+.symp-card:hover {
+  border-color: rgba(var(--accent-rgb), 0.3);
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.15);
+  transform: translateY(-3px);
+}
+
+.symp-card__img-wrap {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 3 / 4;
+  overflow: hidden;
+  background: rgba(var(--accent-rgb), 0.04);
+}
+
+.symp-card__img-wrap img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: top center;
+  display: block;
+  transition: transform 0.3s ease;
+}
+
+.symp-card:hover .symp-card__img-wrap img {
+  transform: scale(1.03);
+}
+
+.symp-card__zoom-hint {
+  position: absolute;
+  bottom: 8px;
+  right: 8px;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.5);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  transition: opacity 0.2s;
+}
+
+.symp-card:hover .symp-card__zoom-hint {
+  opacity: 1;
+}
+
+.symp-card__info {
+  padding: 0.65rem 0.75rem;
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.symp-card__edition {
+  font-family: var(--font-heading);
+  font-weight: 600;
+  font-size: 0.85rem;
+  color: var(--text);
+}
+
+.symp-card__date {
+  font-size: 0.75rem;
+  color: var(--text);
+  font-weight: 400;
+  white-space: nowrap;
+}
+
+/* Flyer lightbox modal */
+.symp-modal-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  background: rgba(0, 0, 0, 0.8);
+  backdrop-filter: blur(6px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem;
+  animation: symp-fade-in 0.2s ease;
+}
+
+@keyframes symp-fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.symp-modal {
+  position: relative;
+  max-width: 900px;
+  width: 100%;
+  max-height: 92vh;
+  display: flex;
+  flex-direction: column;
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+.symp-modal__close {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  z-index: 2;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  border: none;
+  background: rgba(0, 0, 0, 0.5);
+  color: #fff;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.2s;
+}
+
+.symp-modal__close:hover {
+  background: rgba(0, 0, 0, 0.75);
+}
+
+.symp-modal__close svg {
+  width: 16px;
+  height: 16px;
+}
+
+.symp-modal__img-scroll {
+  flex: 1;
+  overflow-y: auto;
+  background: rgba(0, 0, 0, 0.2);
+}
+
+.symp-modal__img {
+  width: 100%;
+  display: block;
+}
+
+.symp-modal__footer {
+  padding: 0.75rem 1rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  border-top: 1px solid var(--card-border);
+}
+
+.symp-modal__title {
+  font-size: 0.82rem;
+  color: var(--text);
+  font-weight: 400;
+  flex: 1;
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.symp-modal__download {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.78rem;
+  font-weight: 500;
+  color: var(--accent);
+  text-decoration: none;
+  white-space: nowrap;
+  transition: opacity 0.2s;
+}
+
+.symp-modal__download:hover {
+  opacity: 0.8;
+}
+
+.symp-modal__download svg {
+  width: 12px;
+  height: 12px;
+}
+
 /* ---------- Contact Section ---------- */
 .contact__card {
   max-width: 560px;
@@ -1306,7 +1517,7 @@ button:focus-visible {
 .footer__text {
   font-family: var(--font-mono);
   font-size: 0.75rem;
-  color: var(--text-muted);
+  color: var(--text);
   letter-spacing: 0.03em;
 }
 
@@ -1441,6 +1652,10 @@ button:focus-visible {
   border-color: rgba(200, 16, 46, 0.25);
 }
 
+.alt-theme .symp-card:hover {
+  border-color: rgba(200, 16, 46, 0.25);
+}
+
 .alt-theme .contact__link:hover {
   background: rgba(200, 16, 46, 0.06);
 }
@@ -1566,6 +1781,10 @@ button:focus-visible {
   .funding-grid {
     grid-template-columns: repeat(2, 1fr);
   }
+
+  .symp-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
 }
 
 @media (max-width: 700px) {
@@ -1631,6 +1850,10 @@ button:focus-visible {
 
   .funding-grid {
     grid-template-columns: 1fr;
+  }
+
+  .symp-grid {
+    grid-template-columns: repeat(2, 1fr);
   }
 
   .pub-card {

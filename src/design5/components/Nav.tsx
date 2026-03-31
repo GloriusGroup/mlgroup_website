@@ -50,6 +50,7 @@ export function Nav({
         <li><a href="#projects" onClick={scrollTo("projects")}>Projects</a></li>
         <li><a href="#publications" onClick={scrollTo("publications")}>Publications</a></li>
         <li><a href="#team" onClick={scrollTo("team")}>Team</a></li>
+        <li><a href="#symposiums" onClick={scrollTo("symposiums")}>Symposiums</a></li>
         <li><a href="#funding" onClick={scrollTo("funding")}>Funding</a></li>
         <li><a href="#contact" onClick={scrollTo("contact")}>Contact</a></li>
       </ul>

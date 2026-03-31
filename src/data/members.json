@@ -164,5 +164,32 @@
       "linkedin": "https://www.linkedin.com/in/marius-k%C3%BChnemund-1b677b225/"
     },
     "section": "alumni"
+  },
+  {
+    "name": "Latimah Bustillo Arrechea",
+    "role": "Alumnus",
+    "image": "latimah_bustillo_arrechea.png",
+    "email": "",
+    "description": "Former Visiting PhD Student in the group. Current position: University of Lisboa, Lisboa, Portugal.",
+    "links": {},
+    "section": "alumni"
+  },
+  {
+    "name": "Dr. Felix Strieth-Kalthoff",
+    "role": "Alumnus",
+    "image": "felix_strieth_kalthoff.png",
+    "email": "",
+    "description": "Former PhD Student in the group. Current position: Assistant Professor, University of Wuppertal, Faculty of Mathematics and Natural Sciences, Assistant Professorship for Digital Chemistry.",
+    "links": {},
+    "section": "alumni"
+  },
+  {
+    "name": "Dr. Frederik Sandfort",
+    "role": "Alumnus",
+    "image": "frederik_sandfort.png",
+    "email": "",
+    "description": "Former PhD Student in the group. Current position: BASF SE, Ludwigshafen, Germany.",
+    "links": {},
+    "section": "alumni"
   }
 ]

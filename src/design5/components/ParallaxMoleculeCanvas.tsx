@@ -94,16 +94,16 @@ const CANVAS_PERF_DEBUG =
   new URLSearchParams(window.location.search).get("canvas_perf") === "1";
 
 const FIREFOX_QUALITY_PROFILES = [
-  { particleFraction: 0.62, lineFrameStride: 3, lineDistanceScale: 0, showDecorations: false },
-  { particleFraction: 0.82, lineFrameStride: 2, lineDistanceScale: 0.62, showDecorations: false },
-  { particleFraction: 1, lineFrameStride: 1, lineDistanceScale: 0.82, showDecorations: true },
+  { particleFraction: 0.5, lineFrameStride: 1, lineDistanceScale: 0, showDecorations: false },
+  { particleFraction: 0.75, lineFrameStride: 1, lineDistanceScale: 0, showDecorations: false },
+  { particleFraction: 1, lineFrameStride: 1, lineDistanceScale: 0, showDecorations: false },
 ] as const;
 
 const FIREFOX_RENDER_INTERVALS = {
-  idle: 1000 / 40,
-  scroll: 1000 / 30,
-  fastScroll: 1000 / 24,
-  overloaded: 1000 / 18,
+  idle: 1000 / 30,
+  scroll: 1000 / 24,
+  fastScroll: 1000 / 18,
+  overloaded: 1000 / 14,
 } as const;
 
 export function ParallaxMoleculeCanvas({
@@ -164,8 +164,8 @@ export function ParallaxMoleculeCanvas({
     if (!ctx) return;
 
     const isFirefox = IS_FIREFOX;
-    const firefoxDensityScale = 0.72;
-    const firefoxRenderScale = 0.72;
+    const firefoxDensityScale = 0.4;
+    const firefoxRenderScale = 0.5;
     const renderScale = isFirefox ? firefoxRenderScale : 1;
     const minFrameTime = isFirefox ? 1000 / 40 : 0;
     const scrollOffsets = new Float32Array(LAYERS.length);
@@ -400,8 +400,6 @@ export function ParallaxMoleculeCanvas({
       }
 
       // --- Physics (per-layer to skip cross-layer checks) ---
-      const repelDist = 30;
-      const repelDistSq = repelDist * repelDist;
       const effectiveQualityLevel = isFirefox
         ? isScrollActive
           ? scrollVelocity > 90
@@ -410,40 +408,47 @@ export function ParallaxMoleculeCanvas({
           : qualityLevel
         : 2;
       const qualityProfile = FIREFOX_QUALITY_PROFILES[effectiveQualityLevel];
-      for (let li = 0; li < LAYERS.length; li++) {
-        const group = layerGroups[li]!;
-        const activeCount = Math.max(3, Math.floor(group.length * qualityProfile.particleFraction));
-        for (let i = 0; i < activeCount; i++) {
-          const pI = group[i]!;
-          for (let j = i + 1; j < activeCount; j++) {
-            const pJ = group[j]!;
-            const ddx = pI.x - pJ.x;
-            if (ddx > repelDist || ddx < -repelDist) continue; // early-out
-            const ddy = pI.renderY - pJ.renderY;
-            if (ddy > repelDist || ddy < -repelDist) continue;
-            const ddSq = ddx * ddx + ddy * ddy;
-            if (ddSq < repelDistSq && ddSq > 0) {
-              const dd = Math.sqrt(ddSq);
-              const f = ((repelDist - dd) / repelDist) * 0.04 * frameScale;
-              const fx = (ddx / dd) * f;
-              const fy = (ddy / dd) * f;
-              pI.vx += fx;
-              pI.vy += fy;
-              pJ.vx -= fx;
-              pJ.vy -= fy;
+
+      // Skip O(n²) inter-particle repulsion entirely on Firefox — barely
+      // noticeable visually but saves ~1000+ comparisons per frame.
+      if (!isFirefox) {
+        const repelDist = 30;
+        const repelDistSq = repelDist * repelDist;
+        for (let li = 0; li < LAYERS.length; li++) {
+          const group = layerGroups[li]!;
+          const activeCount = Math.max(3, Math.floor(group.length * qualityProfile.particleFraction));
+          for (let i = 0; i < activeCount; i++) {
+            const pI = group[i]!;
+            for (let j = i + 1; j < activeCount; j++) {
+              const pJ = group[j]!;
+              const ddx = pI.x - pJ.x;
+              if (ddx > repelDist || ddx < -repelDist) continue;
+              const ddy = pI.renderY - pJ.renderY;
+              if (ddy > repelDist || ddy < -repelDist) continue;
+              const ddSq = ddx * ddx + ddy * ddy;
+              if (ddSq < repelDistSq && ddSq > 0) {
+                const dd = Math.sqrt(ddSq);
+                const f = ((repelDist - dd) / repelDist) * 0.04 * frameScale;
+                const fx = (ddx / dd) * f;
+                const fy = (ddy / dd) * f;
+                pI.vx += fx;
+                pI.vy += fy;
+                pJ.vx -= fx;
+                pJ.vy -= fy;
+              }
             }
           }
         }
       }
 
-      const edgeZone = w * 0.18;
       const mouseActive = mouse.x > -9000;
       const repelR = MEMBER_MODE ? 250 : 160;
       const repelRSq = repelR * repelR;
+      const edgeZone = isFirefox ? 0 : w * 0.18;
 
       for (let i = 0; i < particles.length; i++) {
         const p = particles[i]!;
-        // Mouse repulsion
+        // Mouse repulsion (O(n) — keep on Firefox for interactivity)
         if (mouseActive) {
           const dx = p.x - mouse.x;
           const dy = p.renderY - mouse.y;
@@ -456,7 +461,7 @@ export function ParallaxMoleculeCanvas({
           }
         }
 
-        // Edge repulsion in hero viewport
+        // Edge repulsion in hero viewport (skip on Firefox)
         if (edgeZone > 0) {
           if (p.renderY - scrollY > -50 && p.renderY - scrollY < h) {
             if (p.x < edgeZone) {
@@ -565,8 +570,8 @@ export function ParallaxMoleculeCanvas({
             const py = rpy[i]!;
             if (px < -20 || px > w + 20 || py < -20 || py > h + 20) continue;
 
-            const breathe = Math.sin(time * 1.8 + p.phase) * 0.05;
-            const a = Math.max(0, p.alpha + breathe);
+            // Skip per-particle sin() on Firefox — use static alpha
+            const a = isFirefox ? p.alpha : Math.max(0, p.alpha + Math.sin(time * 1.8 + p.phase) * 0.05);
 
             if (isFirefox) {
               const sprite = getParticleSprite(
@@ -611,8 +616,7 @@ export function ParallaxMoleculeCanvas({
             const py = rpy[i]!;
             if (px < -20 || px > w + 20 || py < -20 || py > h + 20) continue;
 
-            const breathe = Math.sin(time * 1.8 + p.phase) * 0.05;
-            const a = Math.max(0, p.alpha + breathe);
+            const a = isFirefox ? p.alpha : Math.max(0, p.alpha + Math.sin(time * 1.8 + p.phase) * 0.05);
 
             const img = useAllImgs
               ? allImgsRef.current[p.memberImgIdx]
@@ -658,12 +662,12 @@ export function ParallaxMoleculeCanvas({
 
       if (isFirefox) {
         if (qualityCooldown > 0) qualityCooldown--;
-        if (qualityCooldown === 0 && emaDrawMs > 24 && qualityLevel > 0) {
+        if (qualityCooldown === 0 && emaDrawMs > 16 && qualityLevel > 0) {
           qualityLevel--;
-          qualityCooldown = 90;
-        } else if (qualityCooldown === 0 && emaDrawMs < 14 && currentFps > 27 && qualityLevel < 2) {
+          qualityCooldown = 45;
+        } else if (qualityCooldown === 0 && emaDrawMs < 8 && currentFps > 27 && qualityLevel < 2) {
           qualityLevel++;
-          qualityCooldown = 180;
+          qualityCooldown = 120;
         }
       }
 
