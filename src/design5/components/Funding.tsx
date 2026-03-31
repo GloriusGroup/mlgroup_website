@@ -20,7 +20,7 @@ const FUNDERS: Funder[] = [
     logo: spp2363Logo,
     description:
       'Deutsche Forschungsgemeinschaft, Priority Program "Molecular Machine Learning" (SPP 2363)',
-    link: "https://uni-muenster.de/SPP2363/",
+    link: "https://www.uni-muenster.de/SPP2363/",
   },
   {
     name: "EFRE/JTF NRW 2021–2027",
