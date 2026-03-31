@@ -82,13 +82,14 @@
   },
   {
     "name": "Debanjan Rana",
-    "role": "PhD Student",
+    "role": "Alumnus",
     "image": "debanjan_rana.png",
-    "email": "debanjan.rana@uni-muenster.de",
-    "description": "Energy transfer catalysis and data-driven screening strategies for dearomative cycloadditions. Co-developed the EnTdecker platform and co-authored work on standardized substrate selection for unbiased reaction evaluation.",
+    "email": "",
+    "description": "Former PhD Student in the group. Worked on energy transfer catalysis and data-driven screening strategies for dearomative cycloadditions. Co-developed the EnTdecker platform.",
     "links": {
       "linkedin": "http://www.linkedin.com/in/debanjan-rana-101947128/"
-    }
+    },
+    "section": "alumni"
   },
   {
     "name": "Leon Schlosser",
@@ -189,6 +190,15 @@
     "image": "frederik_sandfort.png",
     "email": "",
     "description": "Former PhD Student in the group. Current position: BASF SE, Ludwigshafen, Germany.",
+    "links": {},
+    "section": "alumni"
+  },
+  {
+    "name": "Dr. Felix Schäfer",
+    "role": "Alumnus",
+    "image": "felix_schaefer.png",
+    "email": "",
+    "description": "Former PhD Student in the group. Current position: Lonza AG.",
     "links": {},
     "section": "alumni"
   }

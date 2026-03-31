@@ -16,6 +16,7 @@ import marius_kuehnemund from "./marius_kuehnemund.webp";
 import latimah_bustillo_arrechea from "./latimah_bustillo_arrechea.webp";
 import felix_strieth_kalthoff from "./felix_strieth_kalthoff.webp";
 import frederik_sandfort from "./frederik_sandfort.webp";
+import felix_schaefer from "./felix_schaefer.webp";
 
 export const memberImages: Record<string, string> = {
   "frank_glorius.png": frank_glorius,
@@ -36,6 +37,7 @@ export const memberImages: Record<string, string> = {
   "latimah_bustillo_arrechea.png": latimah_bustillo_arrechea,
   "felix_strieth_kalthoff.png": felix_strieth_kalthoff,
   "frederik_sandfort.png": frederik_sandfort,
+  "felix_schaefer.png": felix_schaefer,
 };
 
 /** 3-letter shortcodes for the ?member= easter egg */

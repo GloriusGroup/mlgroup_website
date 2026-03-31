@@ -71,11 +71,12 @@ function createGLRenderer(canvas: HTMLCanvasElement, accentRgb: string) {
   // Try multiple WebGL context types — Firefox may reject some options/contexts.
   // desynchronized can cause failures on some drivers, so try without it too.
   const opts = { alpha: true, premultipliedAlpha: true, antialias: false, failIfMajorPerformanceCaveat: false };
-  const gl =
-    canvas.getContext("webgl2", { ...opts, desynchronized: true }) as WebGLRenderingContext | null ??
+  const gl = (
+    canvas.getContext("webgl2", { ...opts, desynchronized: true }) ??
     canvas.getContext("webgl", { ...opts, desynchronized: true }) ??
-    canvas.getContext("webgl2", opts) as WebGLRenderingContext | null ??
-    canvas.getContext("webgl", opts);
+    canvas.getContext("webgl2", opts) ??
+    canvas.getContext("webgl", opts)
+  ) as WebGLRenderingContext | null;
   if (!gl) {
     console.warn("[ParallaxCanvas] WebGL unavailable — falling back to Canvas 2D");
     return null;
@@ -191,7 +192,7 @@ function createGLRenderer(canvas: HTMLCanvasElement, accentRgb: string) {
     },
     render(
       particles: Particle[],
-      lines: { x1: number; y1: number; x2: number; y2: number; alpha: number }[],
+      lineData: Float32Array, lineCount: number,
       w: number, h: number, scale: number,
     ) {
       if (curW !== w || curH !== h) this.resize(w, h, scale);
@@ -199,13 +200,13 @@ function createGLRenderer(canvas: HTMLCanvasElement, accentRgb: string) {
       gl!.clear(gl!.COLOR_BUFFER_BIT);
 
       // --- Draw lines first (behind particles) ---
-      if (lines.length > 0) {
-        const lc = Math.min(lines.length, MAX_LINES);
+      if (lineCount > 0) {
+        const lc = Math.min(lineCount, MAX_LINES);
         for (let i = 0; i < lc; i++) {
-          const l = lines[i]!;
-          linePosArr[i * 4] = l.x1; linePosArr[i * 4 + 1] = l.y1;
-          linePosArr[i * 4 + 2] = l.x2; linePosArr[i * 4 + 3] = l.y2;
-          lineAlphaArr[i * 2] = l.alpha; lineAlphaArr[i * 2 + 1] = l.alpha;
+          const off = i * 5;
+          linePosArr[i * 4] = lineData[off]!; linePosArr[i * 4 + 1] = lineData[off + 1]!;
+          linePosArr[i * 4 + 2] = lineData[off + 2]!; linePosArr[i * 4 + 3] = lineData[off + 3]!;
+          lineAlphaArr[i * 2] = lineData[off + 4]!; lineAlphaArr[i * 2 + 1] = lineData[off + 4]!;
         }
         gl!.useProgram(lp);
         gl!.uniform2f(lURes, w, h);
@@ -309,20 +310,38 @@ export function ParallaxMoleculeCanvas({
     const isFirefox = IS_FIREFOX;
 
     // --- Try WebGL first (all browsers), fall back to Canvas 2D ---
-    const glRenderer = createGLRenderer(canvas, accentRgb);
+    // Member mode needs Canvas 2D for image drawing (WebGL has no texture support here)
+    const glRenderer = MEMBER_MODE ? null : createGLRenderer(canvas, accentRgb);
     const useWebGL = !!glRenderer;
     const ctx = useWebGL ? null : canvas.getContext("2d", { desynchronized: true });
     if (!useWebGL && !ctx) return;
-    console.log(`[ParallaxCanvas] Renderer: ${useWebGL ? "WebGL" : "Canvas 2D"}, Firefox: ${isFirefox}`);
+    console.log(`[ParallaxCanvas] Renderer: ${useWebGL ? "WebGL" : "Canvas 2D"}, Firefox: ${isFirefox}, MemberMode: ${MEMBER_MODE}`);
 
     // WebGL: GPU handles it → full quality. Canvas 2D fallback: CPU-bound → reduce work.
-    const densityScale = useWebGL ? 1 : 0.5;
-    const baseRenderScale = useWebGL ? 0.75 : 0.5;
+    const densityScale = useWebGL ? 1 : (MEMBER_MODE ? 0.6 : 0.5);
+    const baseRenderScale = useWebGL ? 0.75 : (MEMBER_MODE ? 1.0 : 0.5);
     let renderScale = baseRenderScale;
 
     const scrollOffsets = new Float32Array(LAYERS.length);
     const colorCache = new Map<number, string>();
     const spriteCache2d = new Map<number, HTMLCanvasElement>();
+    // Pre-allocated flat array for WebGL line data: [x1, y1, x2, y2, alpha] per line
+    const GL_MAX_LINES = 2000;
+    const glLineData = new Float32Array(GL_MAX_LINES * 5);
+    const glVisibleParticles: Particle[] = [];
+    // Pre-allocated connection grid (sized for largest connDist = 200)
+    const CONN_CELL_CAP = 12;
+    let connGridCols = 0, connGridRows = 0;
+    let cGridCounts = new Uint8Array(0);
+    let cGridCells = new Uint16Array(0);
+    const reallocConnGrid = () => {
+      const maxConnDist = 200;
+      connGridCols = Math.ceil(viewportWidth / maxConnDist) + 3;
+      connGridRows = Math.ceil((viewportHeight + 160) / maxConnDist) + 3;
+      const len = connGridCols * connGridRows;
+      cGridCounts = new Uint8Array(len);
+      cGridCells = new Uint16Array(len * CONN_CELL_CAP);
+    };
     const perfHost = window as Window & { __parallaxCanvasPerf?: Record<string, unknown> };
     let lastFrameTime = 0;
     let frameCount = 0;
@@ -352,6 +371,7 @@ export function ParallaxMoleculeCanvas({
       gridCells = new Uint16Array(len * CELL_CAP);
     };
     reallocGrid();
+    reallocConnGrid();
 
     const toRgba = (alpha: number) => {
       const clamped = Math.max(0, Math.min(1, alpha));
@@ -373,12 +393,13 @@ export function ParallaxMoleculeCanvas({
         const [sMin, sMax] = cfg.sizeRange;
         const [aMin, aMax] = cfg.alphaRange;
         for (let i = 0; i < count; i++) {
-          const memberScale = MEMBER_MODE ? 2.5 : 1;
+          const rawR = sMin + Math.random() * (sMax - sMin);
+          const r = MEMBER_MODE ? Math.max(18, rawR * 4) : rawR;
           particles.push({
             x: Math.random() * w, y: Math.random() * h,
             vx: (Math.random() - 0.5) * cfg.drift * 2,
             vy: (Math.random() - 0.5) * cfg.drift * 2,
-            r: (sMin + Math.random() * (sMax - sMin)) * memberScale,
+            r,
             alpha: aMin + Math.random() * (aMax - aMin),
             isNode: i < count * cfg.nodeRatio,
             layer: li, idx: i,
@@ -410,6 +431,7 @@ export function ParallaxMoleculeCanvas({
       viewportWidth = window.innerWidth;
       viewportHeight = window.innerHeight;
       reallocGrid();
+      reallocConnGrid();
       if (useWebGL) {
         glRenderer!.resize(viewportWidth, viewportHeight, renderScale);
       } else {
@@ -475,17 +497,20 @@ export function ParallaxMoleculeCanvas({
         particles[i]!.renderY = renderedY(particles[i]!);
       }
 
-      // --- Physics (spatial-hash grid to avoid O(n²) full scan) ---
+      // --- Physics (spatial-hash grid, only on-screen particles) ---
       const repelDistSq = REPEL_DIST * REPEL_DIST;
+      const screenMargin = 60; // include particles slightly off-screen so they repel smoothly
 
       for (let li = 0; li < LAYERS.length; li++) {
         const group = layerGroups[li]!;
         const activePhysics = Math.max(3, Math.floor(group.length * particleFraction));
         // Clear grid
         gridCounts.fill(0);
-        // Insert particles into grid
+        // Only insert on-screen particles into the grid
         for (let i = 0; i < activePhysics; i++) {
           const p = group[i]!;
+          if (p.x < -screenMargin || p.x > w + screenMargin ||
+              p.renderY < -screenMargin || p.renderY > h + screenMargin) continue;
           const cx = Math.max(0, Math.min(gridCols - 1, ((p.x + REPEL_DIST) / REPEL_DIST) | 0));
           const cy = Math.max(0, Math.min(gridRows - 1, ((p.renderY + 80 + REPEL_DIST) / REPEL_DIST) | 0));
           const ci = cy * gridCols + cx;
@@ -494,10 +519,11 @@ export function ParallaxMoleculeCanvas({
             gridCounts[ci]!++;
           }
         }
-        // Check each particle against its own cell + right/bottom neighbors
-        // (avoids double-counting: only check cells with higher or equal index)
+        // Check each on-screen particle against its 3x3 neighborhood
         for (let i = 0; i < activePhysics; i++) {
           const pI = group[i]!;
+          if (pI.x < -screenMargin || pI.x > w + screenMargin ||
+              pI.renderY < -screenMargin || pI.renderY > h + screenMargin) continue;
           const cx = Math.max(0, Math.min(gridCols - 1, ((pI.x + REPEL_DIST) / REPEL_DIST) | 0));
           const cy = Math.max(0, Math.min(gridRows - 1, ((pI.renderY + 80 + REPEL_DIST) / REPEL_DIST) | 0));
           // Check 3x3 neighborhood, but only pairs where j > i
@@ -565,8 +591,8 @@ export function ParallaxMoleculeCanvas({
       // RENDER — WebGL path (Firefox) vs Canvas 2D path (Chrome/Edge)
       // =====================================================================
       if (useWebGL) {
-        const visible: Particle[] = [];
-        const lines: { x1: number; y1: number; x2: number; y2: number; alpha: number }[] = [];
+        glVisibleParticles.length = 0;
+        let lineCount = 0;
 
         for (let li = 0; li < LAYERS.length; li++) {
           const cfg = LAYERS[li]!;
@@ -576,34 +602,73 @@ export function ParallaxMoleculeCanvas({
           const connDistSq = connDist * connDist;
           const avgAlpha = (cfg.alphaRange[0] + cfg.alphaRange[1]) * 0.5;
 
+          // Reuse pre-allocated connection grid (clear counts, not the whole array)
+          cGridCounts.fill(0);
+
+          // Collect visible particles and insert into connection grid
+          const layerStart = glVisibleParticles.length;
           for (let i = 0; i < count; i++) {
             const p = group[i]!;
             if (p.renderY < -20 || p.renderY > h + 20 || p.x < -20 || p.x > w + 20) continue;
-            visible.push(p);
-            // Connection lines to nearby particles in same layer
-            {
-              for (let j = i + 1; j < count; j++) {
-                const q = group[j]!;
-                const dx = p.x - q.x;
-                if (dx > connDist || dx < -connDist) continue;
-                const dy = p.renderY - q.renderY;
-                if (dy > connDist || dy < -connDist) continue;
-                const distSq = dx * dx + dy * dy;
-                if (distSq < connDistSq) {
-                  const dist = Math.sqrt(distSq);
-                  const alpha = (1 - dist / connDist) * avgAlpha;
-                  lines.push({ x1: p.x, y1: p.renderY, x2: q.x, y2: q.renderY, alpha });
-                }
-              }
+            const vi = glVisibleParticles.length;
+            glVisibleParticles.push(p);
+            const cx = Math.max(0, Math.min(connGridCols - 1, (p.x / connDist) | 0));
+            const cy = Math.max(0, Math.min(connGridRows - 1, ((p.renderY + 80) / connDist) | 0));
+            const ci = cy * connGridCols + cx;
+            if (cGridCounts[ci]! < CONN_CELL_CAP) {
+              cGridCells[ci * CONN_CELL_CAP + cGridCounts[ci]!] = vi;
+              cGridCounts[ci]!++;
             }
           }
+
+          // Find connections using spatial grid (only check 3x3 neighborhood)
+          for (let vi = layerStart; vi < glVisibleParticles.length; vi++) {
+            const p = glVisibleParticles[vi]!;
+            const cx = Math.max(0, Math.min(connGridCols - 1, (p.x / connDist) | 0));
+            const cy = Math.max(0, Math.min(connGridRows - 1, ((p.renderY + 80) / connDist) | 0));
+            for (let dy = -1; dy <= 1; dy++) {
+              const ny = cy + dy;
+              if (ny < 0 || ny >= connGridRows) continue;
+              for (let dx = -1; dx <= 1; dx++) {
+                const nx = cx + dx;
+                if (nx < 0 || nx >= connGridCols) continue;
+                const ni = ny * connGridCols + nx;
+                const cc = cGridCounts[ni]!;
+                const base = ni * CONN_CELL_CAP;
+                for (let k = 0; k < cc; k++) {
+                  const vj = cGridCells[base + k]!;
+                  if (vj <= vi) continue;
+                  const q = glVisibleParticles[vj]!;
+                  const ddx = p.x - q.x;
+                  if (ddx > connDist || ddx < -connDist) continue;
+                  const ddy = p.renderY - q.renderY;
+                  if (ddy > connDist || ddy < -connDist) continue;
+                  const distSq = ddx * ddx + ddy * ddy;
+                  if (distSq < connDistSq) {
+                    const dist = Math.sqrt(distSq);
+                    const alpha = (1 - dist / connDist) * avgAlpha;
+                    glLineData[lineCount * 5] = p.x;
+                    glLineData[lineCount * 5 + 1] = p.renderY;
+                    glLineData[lineCount * 5 + 2] = q.x;
+                    glLineData[lineCount * 5 + 3] = q.renderY;
+                    glLineData[lineCount * 5 + 4] = alpha;
+                    lineCount++;
+                    if (lineCount >= GL_MAX_LINES) break;
+                  }
+                }
+                if (lineCount >= GL_MAX_LINES) break;
+              }
+              if (lineCount >= GL_MAX_LINES) break;
+            }
+            if (lineCount >= GL_MAX_LINES) break;
+          }
         }
-        glRenderer!.render(visible, lines, w, h, renderScale);
+        glRenderer!.render(glVisibleParticles, glLineData, lineCount, w, h, renderScale);
       } else {
-        // --- Canvas 2D fallback (no GPU) — aggressively optimized ---
-        // No connection lines, no decorations, no breathing sin(), pre-rendered sprites.
+        // --- Canvas 2D fallback (no GPU / member mode) ---
         ctx!.clearRect(0, 0, w, h);
-        ctx!.imageSmoothingEnabled = false;
+        ctx!.imageSmoothingEnabled = MEMBER_MODE;
+        ctx!.imageSmoothingQuality = "high";
 
         // Sprite cache: pre-render each unique radius as a filled circle canvas
         const getSprite = (radius: number): HTMLCanvasElement => {
@@ -628,9 +693,32 @@ export function ParallaxMoleculeCanvas({
           for (let i = 0; i < count; i++) {
             const p = group[i]!;
             if (p.renderY < -20 || p.renderY > h + 20 || p.x < -20 || p.x > w + 20) continue;
-            const sprite = getSprite(p.r);
-            ctx!.globalAlpha = p.alpha;
-            ctx!.drawImage(sprite, p.x - sprite.width * 0.5, p.renderY - sprite.height * 0.5);
+
+            if (MEMBER_MODE) {
+              // Draw member face images as circular clipped sprites
+              const img = ALL_MODE
+                ? allImgsRef.current[p.memberImgIdx]
+                : memberImgRef.current;
+              if (img && img.complete && img.naturalWidth > 0) {
+                const size = p.r * 2;
+                ctx!.save();
+                ctx!.globalAlpha = Math.min(1, p.alpha * 2.5);
+                ctx!.beginPath();
+                ctx!.arc(p.x, p.renderY, p.r, 0, Math.PI * 2);
+                ctx!.clip();
+                ctx!.drawImage(img, p.x - p.r, p.renderY - p.r, size, size);
+                ctx!.restore();
+              } else {
+                // Fallback to circle while images load
+                const sprite = getSprite(p.r);
+                ctx!.globalAlpha = p.alpha;
+                ctx!.drawImage(sprite, p.x - sprite.width * 0.5, p.renderY - sprite.height * 0.5);
+              }
+            } else {
+              const sprite = getSprite(p.r);
+              ctx!.globalAlpha = p.alpha;
+              ctx!.drawImage(sprite, p.x - sprite.width * 0.5, p.renderY - sprite.height * 0.5);
+            }
           }
         }
         ctx!.globalAlpha = 1;
