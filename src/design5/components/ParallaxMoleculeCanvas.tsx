@@ -68,14 +68,40 @@ const CANVAS_PERF_DEBUG =
 // Used on Firefox where Canvas 2D is fundamentally CPU-bound and slow.
 // ---------------------------------------------------------------------------
 function createGLRenderer(canvas: HTMLCanvasElement, accentRgb: string) {
-  const gl = canvas.getContext("webgl", {
-    alpha: true, premultipliedAlpha: true, desynchronized: true, antialias: false,
-  });
-  if (!gl) return null;
+  // Try multiple WebGL context types — Firefox may reject some options/contexts.
+  // desynchronized can cause failures on some drivers, so try without it too.
+  const opts = { alpha: true, premultipliedAlpha: true, antialias: false, failIfMajorPerformanceCaveat: false };
+  const gl =
+    canvas.getContext("webgl2", { ...opts, desynchronized: true }) as WebGLRenderingContext | null ??
+    canvas.getContext("webgl", { ...opts, desynchronized: true }) ??
+    canvas.getContext("webgl2", opts) as WebGLRenderingContext | null ??
+    canvas.getContext("webgl", opts);
+  if (!gl) {
+    console.warn("[ParallaxCanvas] WebGL unavailable — falling back to Canvas 2D");
+    return null;
+  }
+  const renderer = gl.getParameter(gl.RENDERER);
+  console.log(`[ParallaxCanvas] WebGL active: ${renderer}`);
 
   const rgb = accentRgb.split(",").map((s) => parseFloat(s.trim()) / 255);
 
-  const vsSrc = `
+  function compile(type: number, src: string) {
+    const s = gl!.createShader(type)!;
+    gl!.shaderSource(s, src);
+    gl!.compileShader(s);
+    return s;
+  }
+  function link(vSrc: string, fSrc: string) {
+    const p = gl!.createProgram()!;
+    const v = compile(gl!.VERTEX_SHADER, vSrc);
+    const f = compile(gl!.FRAGMENT_SHADER, fSrc);
+    gl!.attachShader(p, v); gl!.attachShader(p, f);
+    gl!.linkProgram(p);
+    return { prog: p, vs: v, fs: f };
+  }
+
+  // --- Point sprite program (particles) ---
+  const pointProg = link(`
     attribute vec2 a_pos;
     attribute float a_size;
     attribute float a_alpha;
@@ -88,8 +114,7 @@ function createGLRenderer(canvas: HTMLCanvasElement, accentRgb: string) {
       gl_Position = vec4(c, 0.0, 1.0);
       gl_PointSize = a_size * 2.0 * u_scale;
       v_alpha = a_alpha;
-    }`;
-  const fsSrc = `
+    }`,`
     precision mediump float;
     uniform vec3 u_color;
     varying float v_alpha;
@@ -98,41 +123,56 @@ function createGLRenderer(canvas: HTMLCanvasElement, accentRgb: string) {
       if (d > 0.5) discard;
       float a = v_alpha * smoothstep(0.5, 0.32, d);
       gl_FragColor = vec4(u_color * a, a);
-    }`;
+    }`);
+  const pp = pointProg.prog;
+  const pAPos = gl.getAttribLocation(pp, "a_pos");
+  const pASize = gl.getAttribLocation(pp, "a_size");
+  const pAAlpha = gl.getAttribLocation(pp, "a_alpha");
+  const pURes = gl.getUniformLocation(pp, "u_res");
+  const pUScale = gl.getUniformLocation(pp, "u_scale");
+  const pUColor = gl.getUniformLocation(pp, "u_color");
 
-  function compile(type: number, src: string) {
-    const s = gl!.createShader(type)!;
-    gl!.shaderSource(s, src);
-    gl!.compileShader(s);
-    return s;
-  }
-  const vs = compile(gl.VERTEX_SHADER, vsSrc);
-  const fs = compile(gl.FRAGMENT_SHADER, fsSrc);
-  const prog = gl.createProgram()!;
-  gl.attachShader(prog, vs);
-  gl.attachShader(prog, fs);
-  gl.linkProgram(prog);
-  gl.useProgram(prog);
-
-  const aPos = gl.getAttribLocation(prog, "a_pos");
-  const aSize = gl.getAttribLocation(prog, "a_size");
-  const aAlpha = gl.getAttribLocation(prog, "a_alpha");
-  const uRes = gl.getUniformLocation(prog, "u_res");
-  const uScale = gl.getUniformLocation(prog, "u_scale");
-  const uColor = gl.getUniformLocation(prog, "u_color");
+  // --- Line program (connections) ---
+  const lineProg = link(`
+    attribute vec2 a_pos;
+    attribute float a_alpha;
+    uniform vec2 u_res;
+    varying float v_alpha;
+    void main() {
+      vec2 c = (a_pos / u_res) * 2.0 - 1.0;
+      c.y = -c.y;
+      gl_Position = vec4(c, 0.0, 1.0);
+      v_alpha = a_alpha;
+    }`,`
+    precision mediump float;
+    uniform vec3 u_color;
+    varying float v_alpha;
+    void main() {
+      gl_FragColor = vec4(u_color * v_alpha, v_alpha);
+    }`);
+  const lp = lineProg.prog;
+  const lAPos = gl.getAttribLocation(lp, "a_pos");
+  const lAAlpha = gl.getAttribLocation(lp, "a_alpha");
+  const lURes = gl.getUniformLocation(lp, "u_res");
+  const lUColor = gl.getUniformLocation(lp, "u_color");
 
   const posBuf = gl.createBuffer()!;
   const sizeBuf = gl.createBuffer()!;
   const alphaBuf = gl.createBuffer()!;
+  const linePosBuf = gl.createBuffer()!;
+  const lineAlphaBuf = gl.createBuffer()!;
 
   const MAX = 300;
   const posArr = new Float32Array(MAX * 2);
   const sizeArr = new Float32Array(MAX);
   const alphaArr = new Float32Array(MAX);
+  // Lines: each segment = 2 vertices, preallocate for up to 2000 segments
+  const MAX_LINES = 2000;
+  const linePosArr = new Float32Array(MAX_LINES * 4); // 2 verts × 2 coords
+  const lineAlphaArr = new Float32Array(MAX_LINES * 2); // 2 verts × 1 alpha
 
   gl.enable(gl.BLEND);
   gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
-  gl.uniform3f(uColor, rgb[0]!, rgb[1]!, rgb[2]!);
 
   let curW = 0, curH = 0;
 
@@ -149,47 +189,78 @@ function createGLRenderer(canvas: HTMLCanvasElement, accentRgb: string) {
       curW = w; curH = h;
       gl!.viewport(0, 0, cw, ch);
     },
-    render(particles: Particle[], w: number, h: number, scale: number) {
+    render(
+      particles: Particle[],
+      lines: { x1: number; y1: number; x2: number; y2: number; alpha: number }[],
+      w: number, h: number, scale: number,
+    ) {
       if (curW !== w || curH !== h) this.resize(w, h, scale);
       gl!.clearColor(0, 0, 0, 0);
       gl!.clear(gl!.COLOR_BUFFER_BIT);
-      gl!.useProgram(prog);
-      gl!.uniform2f(uRes, w, h);
-      gl!.uniform1f(uScale, scale);
 
+      // --- Draw lines first (behind particles) ---
+      if (lines.length > 0) {
+        const lc = Math.min(lines.length, MAX_LINES);
+        for (let i = 0; i < lc; i++) {
+          const l = lines[i]!;
+          linePosArr[i * 4] = l.x1; linePosArr[i * 4 + 1] = l.y1;
+          linePosArr[i * 4 + 2] = l.x2; linePosArr[i * 4 + 3] = l.y2;
+          lineAlphaArr[i * 2] = l.alpha; lineAlphaArr[i * 2 + 1] = l.alpha;
+        }
+        gl!.useProgram(lp);
+        gl!.uniform2f(lURes, w, h);
+        gl!.uniform3f(lUColor, rgb[0]!, rgb[1]!, rgb[2]!);
+
+        gl!.bindBuffer(gl!.ARRAY_BUFFER, linePosBuf);
+        gl!.bufferData(gl!.ARRAY_BUFFER, linePosArr.subarray(0, lc * 4), gl!.DYNAMIC_DRAW);
+        gl!.enableVertexAttribArray(lAPos);
+        gl!.vertexAttribPointer(lAPos, 2, gl!.FLOAT, false, 0, 0);
+
+        gl!.bindBuffer(gl!.ARRAY_BUFFER, lineAlphaBuf);
+        gl!.bufferData(gl!.ARRAY_BUFFER, lineAlphaArr.subarray(0, lc * 2), gl!.DYNAMIC_DRAW);
+        gl!.enableVertexAttribArray(lAAlpha);
+        gl!.vertexAttribPointer(lAAlpha, 1, gl!.FLOAT, false, 0, 0);
+
+        gl!.lineWidth(1);
+        gl!.drawArrays(gl!.LINES, 0, lc * 2);
+        gl!.disableVertexAttribArray(lAPos);
+        gl!.disableVertexAttribArray(lAAlpha);
+      }
+
+      // --- Draw particles on top ---
       const n = Math.min(particles.length, MAX);
       for (let i = 0; i < n; i++) {
         const p = particles[i]!;
-        posArr[i * 2] = p.x;
-        posArr[i * 2 + 1] = p.renderY;
-        sizeArr[i] = p.r;
-        alphaArr[i] = p.alpha;
+        posArr[i * 2] = p.x; posArr[i * 2 + 1] = p.renderY;
+        sizeArr[i] = p.r; alphaArr[i] = p.alpha;
       }
+      gl!.useProgram(pp);
+      gl!.uniform2f(pURes, w, h);
+      gl!.uniform1f(pUScale, scale);
+      gl!.uniform3f(pUColor, rgb[0]!, rgb[1]!, rgb[2]!);
 
       gl!.bindBuffer(gl!.ARRAY_BUFFER, posBuf);
       gl!.bufferData(gl!.ARRAY_BUFFER, posArr.subarray(0, n * 2), gl!.DYNAMIC_DRAW);
-      gl!.enableVertexAttribArray(aPos);
-      gl!.vertexAttribPointer(aPos, 2, gl!.FLOAT, false, 0, 0);
+      gl!.enableVertexAttribArray(pAPos);
+      gl!.vertexAttribPointer(pAPos, 2, gl!.FLOAT, false, 0, 0);
 
       gl!.bindBuffer(gl!.ARRAY_BUFFER, sizeBuf);
       gl!.bufferData(gl!.ARRAY_BUFFER, sizeArr.subarray(0, n), gl!.DYNAMIC_DRAW);
-      gl!.enableVertexAttribArray(aSize);
-      gl!.vertexAttribPointer(aSize, 1, gl!.FLOAT, false, 0, 0);
+      gl!.enableVertexAttribArray(pASize);
+      gl!.vertexAttribPointer(pASize, 1, gl!.FLOAT, false, 0, 0);
 
       gl!.bindBuffer(gl!.ARRAY_BUFFER, alphaBuf);
       gl!.bufferData(gl!.ARRAY_BUFFER, alphaArr.subarray(0, n), gl!.DYNAMIC_DRAW);
-      gl!.enableVertexAttribArray(aAlpha);
-      gl!.vertexAttribPointer(aAlpha, 1, gl!.FLOAT, false, 0, 0);
+      gl!.enableVertexAttribArray(pAAlpha);
+      gl!.vertexAttribPointer(pAAlpha, 1, gl!.FLOAT, false, 0, 0);
 
       gl!.drawArrays(gl!.POINTS, 0, n);
     },
     destroy() {
-      gl!.deleteProgram(prog);
-      gl!.deleteShader(vs);
-      gl!.deleteShader(fs);
-      gl!.deleteBuffer(posBuf);
-      gl!.deleteBuffer(sizeBuf);
-      gl!.deleteBuffer(alphaBuf);
+      gl!.deleteProgram(pp); gl!.deleteShader(pointProg.vs); gl!.deleteShader(pointProg.fs);
+      gl!.deleteProgram(lp); gl!.deleteShader(lineProg.vs); gl!.deleteShader(lineProg.fs);
+      gl!.deleteBuffer(posBuf); gl!.deleteBuffer(sizeBuf); gl!.deleteBuffer(alphaBuf);
+      gl!.deleteBuffer(linePosBuf); gl!.deleteBuffer(lineAlphaBuf);
     },
   };
 }
@@ -242,12 +313,16 @@ export function ParallaxMoleculeCanvas({
     const useWebGL = !!glRenderer;
     const ctx = useWebGL ? null : canvas.getContext("2d", { desynchronized: true });
     if (!useWebGL && !ctx) return;
+    console.log(`[ParallaxCanvas] Renderer: ${useWebGL ? "WebGL" : "Canvas 2D"}, Firefox: ${isFirefox}`);
 
-    const densityScale = useWebGL ? 1 : 1;
-    const renderScale = useWebGL ? 0.75 : 1;
+    // WebGL: GPU handles it → full quality. Canvas 2D fallback: CPU-bound → reduce work.
+    const densityScale = useWebGL ? 1 : 0.5;
+    const baseRenderScale = useWebGL ? 0.75 : 0.5;
+    let renderScale = baseRenderScale;
 
     const scrollOffsets = new Float32Array(LAYERS.length);
     const colorCache = new Map<number, string>();
+    const spriteCache2d = new Map<number, HTMLCanvasElement>();
     const perfHost = window as Window & { __parallaxCanvasPerf?: Record<string, unknown> };
     let lastFrameTime = 0;
     let frameCount = 0;
@@ -490,135 +565,75 @@ export function ParallaxMoleculeCanvas({
       // RENDER — WebGL path (Firefox) vs Canvas 2D path (Chrome/Edge)
       // =====================================================================
       if (useWebGL) {
-        // Single GPU draw call — apply particleFraction per layer
         const visible: Particle[] = [];
-        for (let li = 0; li < LAYERS.length; li++) {
-          const group = layerGroups[li]!;
-          const count = Math.max(3, Math.floor(group.length * particleFraction));
-          for (let i = 0; i < count; i++) {
-            const p = group[i]!;
-            if (p.renderY > -20 && p.renderY < h + 20 && p.x > -20 && p.x < w + 20) {
-              visible.push(p);
-            }
-          }
-        }
-        glRenderer!.render(visible, w, h, renderScale);
-      } else {
-        // --- Canvas 2D path (unchanged for Chrome/Edge) ---
-        ctx!.clearRect(0, 0, w, h);
-        const useSingleImg = MEMBER_IMG_URL && memberLoadedRef.current && memberImgRef.current;
-        const useAllImgs = ALL_MODE && allImgsLoadedRef.current && allImgsRef.current.length > 0;
+        const lines: { x1: number; y1: number; x2: number; y2: number; alpha: number }[] = [];
 
         for (let li = 0; li < LAYERS.length; li++) {
           const cfg = LAYERS[li]!;
           const group = layerGroups[li]!;
-          const buffers = layerBuffers[li]!;
-          const rpx = buffers.x;
-          const rpy = buffers.y;
-          const activeCount = Math.max(3, Math.floor(group.length * particleFraction));
+          const count = Math.max(3, Math.floor(group.length * particleFraction));
           const connDist = cfg.connectionDist;
           const connDistSq = connDist * connDist;
           const avgAlpha = (cfg.alphaRange[0] + cfg.alphaRange[1]) * 0.5;
 
-          for (let i = 0; i < activeCount; i++) {
-            rpx[i] = group[i]!.x;
-            rpy[i] = group[i]!.renderY;
-          }
-
-          // Connection lines
-          const bucketCounts = buffers.bucketCounts;
-          bucketCounts[0] = 0; bucketCounts[1] = 0; bucketCounts[2] = 0; bucketCounts[3] = 0;
-          if (!isScrollActive) {
-            for (let i = 0; i < activeCount; i++) {
-              const ax = rpx[i]!; const ay = rpy[i]!;
-              for (let j = i + 1; j < activeCount; j++) {
-                const dx = ax - rpx[j]!;
+          for (let i = 0; i < count; i++) {
+            const p = group[i]!;
+            if (p.renderY < -20 || p.renderY > h + 20 || p.x < -20 || p.x > w + 20) continue;
+            visible.push(p);
+            // Connection lines to nearby particles in same layer
+            {
+              for (let j = i + 1; j < count; j++) {
+                const q = group[j]!;
+                const dx = p.x - q.x;
                 if (dx > connDist || dx < -connDist) continue;
-                const dy = ay - rpy[j]!;
+                const dy = p.renderY - q.renderY;
                 if (dy > connDist || dy < -connDist) continue;
                 const distSq = dx * dx + dy * dy;
                 if (distSq < connDistSq) {
                   const dist = Math.sqrt(distSq);
                   const alpha = (1 - dist / connDist) * avgAlpha;
-                  const bucket = Math.min(3, (alpha * 4) | 0);
-                  const lb = buffers.lineBuckets[bucket]!;
-                  const off = bucketCounts[bucket]! * 4;
-                  lb[off] = ax; lb[off + 1] = ay; lb[off + 2] = rpx[j]!; lb[off + 3] = rpy[j]!;
-                  bucketCounts[bucket]!++;
+                  lines.push({ x1: p.x, y1: p.renderY, x2: q.x, y2: q.renderY, alpha });
                 }
               }
             }
           }
+        }
+        glRenderer!.render(visible, lines, w, h, renderScale);
+      } else {
+        // --- Canvas 2D fallback (no GPU) — aggressively optimized ---
+        // No connection lines, no decorations, no breathing sin(), pre-rendered sprites.
+        ctx!.clearRect(0, 0, w, h);
+        ctx!.imageSmoothingEnabled = false;
 
-          ctx!.lineWidth = cfg.lineWidth;
-          for (let b = 0; b < 4; b++) {
-            const lc = bucketCounts[b]!;
-            if (lc === 0) continue;
-            const lines = buffers.lineBuckets[b]!;
-            ctx!.strokeStyle = toRgba((b + 0.5) / 4 * avgAlpha);
-            ctx!.beginPath();
-            for (let k = 0; k < lc * 4; k += 4) {
-              ctx!.moveTo(lines[k]!, lines[k + 1]!);
-              ctx!.lineTo(lines[k + 2]!, lines[k + 3]!);
-            }
-            ctx!.stroke();
-          }
+        // Sprite cache: pre-render each unique radius as a filled circle canvas
+        const getSprite = (radius: number): HTMLCanvasElement => {
+          const key = Math.round(radius * 10);
+          let s = spriteCache2d.get(key);
+          if (s) return s;
+          const size = Math.ceil(radius * 2 + 2);
+          s = document.createElement("canvas");
+          s.width = size; s.height = size;
+          const sc = s.getContext("2d")!;
+          sc.fillStyle = `rgb(${accentRgb})`;
+          sc.beginPath();
+          sc.arc(size * 0.5, size * 0.5, radius, 0, Math.PI * 2);
+          sc.fill();
+          spriteCache2d.set(key, s);
+          return s;
+        };
 
-          // Particles
-          if (!useSingleImg && !useAllImgs) {
-            for (let i = 0; i < activeCount; i++) {
-              const p = group[i]!;
-              const px = rpx[i]!; const py = rpy[i]!;
-              if (px < -20 || px > w + 20 || py < -20 || py > h + 20) continue;
-              const breathe = Math.sin(time * 1.8 + p.phase) * 0.05;
-              const a = Math.max(0, p.alpha + breathe);
-
-              ctx!.fillStyle = toRgba(a);
-              ctx!.beginPath();
-              ctx!.arc(px, py, p.r, 0, Math.PI * 2);
-              ctx!.fill();
-
-              if (p.isNode) {
-                ctx!.beginPath();
-                ctx!.arc(px, py, p.r + 5, 0, Math.PI * 2);
-                ctx!.strokeStyle = toRgba(a * 0.3);
-                ctx!.lineWidth = 0.5;
-                ctx!.stroke();
-              }
-              if (p.hasCross) {
-                ctx!.beginPath();
-                ctx!.moveTo(px - 6, py); ctx!.lineTo(px + 6, py);
-                ctx!.moveTo(px, py - 6); ctx!.lineTo(px, py + 6);
-                ctx!.strokeStyle = toRgba(a * 0.4);
-                ctx!.lineWidth = 0.5;
-                ctx!.stroke();
-              }
-            }
-          } else {
-            for (let i = 0; i < activeCount; i++) {
-              const p = group[i]!;
-              const px = rpx[i]!; const py = rpy[i]!;
-              if (px < -20 || px > w + 20 || py < -20 || py > h + 20) continue;
-              const breathe = Math.sin(time * 1.8 + p.phase) * 0.05;
-              const a = Math.max(0, p.alpha + breathe);
-              const img = useAllImgs ? allImgsRef.current[p.memberImgIdx] : memberImgRef.current!;
-              if (!img || !img.complete || img.naturalWidth === 0) {
-                ctx!.beginPath(); ctx!.arc(px, py, p.r * 0.4, 0, Math.PI * 2);
-                ctx!.fillStyle = toRgba(a); ctx!.fill(); continue;
-              }
-              const minDim = Math.min(img.width, img.height);
-              const sx = (img.width - minDim) / 2; const sy = (img.height - minDim) / 2;
-              const size = p.r * 2;
-              ctx!.save();
-              ctx!.globalAlpha = a * 1.8;
-              ctx!.beginPath(); ctx!.arc(px, py, p.r, 0, Math.PI * 2); ctx!.clip();
-              ctx!.drawImage(img, sx, sy, minDim, minDim, px - p.r, py - p.r, size, size);
-              ctx!.restore();
-              ctx!.beginPath(); ctx!.arc(px, py, p.r + 2, 0, Math.PI * 2);
-              ctx!.strokeStyle = toRgba(a * 0.6); ctx!.lineWidth = 0.5; ctx!.stroke();
-            }
+        for (let li = 0; li < LAYERS.length; li++) {
+          const group = layerGroups[li]!;
+          const count = Math.max(3, Math.floor(group.length * particleFraction));
+          for (let i = 0; i < count; i++) {
+            const p = group[i]!;
+            if (p.renderY < -20 || p.renderY > h + 20 || p.x < -20 || p.x > w + 20) continue;
+            const sprite = getSprite(p.r);
+            ctx!.globalAlpha = p.alpha;
+            ctx!.drawImage(sprite, p.x - sprite.width * 0.5, p.renderY - sprite.height * 0.5);
           }
         }
+        ctx!.globalAlpha = 1;
       }
 
       // --- Stats & adaptive quality ---
@@ -629,14 +644,29 @@ export function ParallaxMoleculeCanvas({
         currentFps = (fpsFrameCount * 1000) / (timestamp - fpsWindowStart);
         fpsFrameCount = 0; fpsWindowStart = timestamp;
 
-        // Adapt particle count based on sustained FPS
+        // Adapt particle count + render scale based on sustained FPS
         if (adaptCooldown > 0) { adaptCooldown--; }
         else if (currentFps < 28 && particleFraction > 0.3) {
           particleFraction = Math.max(0.3, particleFraction - 0.15);
-          adaptCooldown = 3; // wait 3s before next change
+          renderScale = Math.max(baseRenderScale * 0.4, renderScale - 0.1);
+          adaptCooldown = 3;
+          // Apply new scale immediately
+          if (useWebGL) glRenderer!.resize(viewportWidth, viewportHeight, renderScale);
+          else {
+            canvas.width = Math.max(1, Math.floor(viewportWidth * renderScale));
+            canvas.height = Math.max(1, Math.floor(viewportHeight * renderScale));
+            ctx!.setTransform(renderScale, 0, 0, renderScale, 0, 0);
+          }
         } else if (currentFps > 50 && particleFraction < 1.0) {
           particleFraction = Math.min(1.0, particleFraction + 0.1);
+          renderScale = Math.min(baseRenderScale, renderScale + 0.05);
           adaptCooldown = 2;
+          if (useWebGL) glRenderer!.resize(viewportWidth, viewportHeight, renderScale);
+          else {
+            canvas.width = Math.max(1, Math.floor(viewportWidth * renderScale));
+            canvas.height = Math.max(1, Math.floor(viewportHeight * renderScale));
+            ctx!.setTransform(renderScale, 0, 0, renderScale, 0, 0);
+          }
         }
       }
 

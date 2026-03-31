@@ -528,9 +528,9 @@ button:focus-visible {
   font-size: clamp(0.85rem, 1.5vw, 1rem);
   font-weight: 400;
   color: var(--text);
-  max-width: 520px;
   margin-top: 1.25rem;
   line-height: 1.6;
+  white-space: nowrap;
   animation: fadeInUp 0.7s ease-out 0.2s both;
 }
 

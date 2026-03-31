@@ -1,7 +1,9 @@
-name: Deploy to GitHub Pages
+name: CI & Deploy
 
 on:
   push:
+    branches: [main]
+  pull_request:
     branches: [main]
   workflow_dispatch:
 
@@ -15,6 +17,7 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  # ── Build & basic checks ───────────────────────────────────────────
   build:
     runs-on: ubuntu-latest
     steps:
@@ -26,14 +29,64 @@ jobs:
 
       - run: bun install
 
-      - run: bun run build
+      - name: Build
+        run: bun run build
+
+      - name: Check bundle size
+        run: |
+          SIZE=$(du -sk dist | cut -f1)
+          echo "Bundle size: ${SIZE}KB"
+          if [ "$SIZE" -gt 20480 ]; then
+            echo "::warning::Bundle exceeds 20MB ($SIZE KB)"
+          fi
 
       - uses: actions/upload-pages-artifact@v3
         with:
           path: dist
 
-  deploy:
+      # Share dist with test job
+      - uses: actions/upload-artifact@v4
+        with:
+          name: dist
+          path: dist
+
+  # ── Playwright tests (Chrome + Firefox) ────────────────────────────
+  test:
     needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - run: bun install
+
+      - name: Install Playwright browsers
+        run: bunx playwright install --with-deps chromium firefox
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: dist
+          path: dist
+
+      - name: Run Playwright tests
+        run: bunx playwright test
+        env:
+          CI: true
+
+      - uses: actions/upload-artifact@v4
+        if: ${{ !cancelled() }}
+        with:
+          name: playwright-report
+          path: playwright-report/
+          retention-days: 14
+
+  # ── Deploy to GitHub Pages (main branch only) ──────────────────────
+  deploy:
+    if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+    needs: [build, test]
     runs-on: ubuntu-latest
     environment:
       name: github-pages

@@ -19,7 +19,8 @@
       "Bash(curl -s -L --max-time 30 https://www.uni-muenster.de/Chemie.oc/glorius/symposium_mml.html)",
       "Bash(curl -s -L --max-time 30 -o /tmp/mml_poster_2026.png 'https://www.uni-muenster.de/imperia/md/images/organisch_chemisches_institut2/glorius/fittosize_1522_2152_c0092da6c28d495c82f88bf7c4491eb0_mml_poster_2026_v2.png')",
       "Read(//tmp/**)",
-      "Bash(curl -s -L --max-time 30 -o /tmp/mml_flyer_2026.pdf 'https://www.uni-muenster.de/imperia/md/content/organisch_chemisches_institut2/glorius/mml_flyer_2026.pdf')"
+      "Bash(curl -s -L --max-time 30 -o /tmp/mml_flyer_2026.pdf 'https://www.uni-muenster.de/imperia/md/content/organisch_chemisches_institut2/glorius/mml_flyer_2026.pdf')",
+      "Bash(bunx playwright:*)"
     ]
   }
 }
