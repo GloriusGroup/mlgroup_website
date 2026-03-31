@@ -314,6 +314,7 @@ button:focus-visible {
   z-index: 0;
   pointer-events: none;
   will-change: transform;
+  contain: strict;
 }
 
 /* ---------- Content Layer ---------- */

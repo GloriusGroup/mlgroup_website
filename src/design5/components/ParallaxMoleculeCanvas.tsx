@@ -14,8 +14,6 @@ const MEMBER_MODE = ALL_MODE || !!MEMBER_IMG_URL;
 
 // ---------------------------------------------------------------------------
 // Depth layers — each represents a plane at a different "distance"
-// Parallax is scroll-only: far particles barely shift, near particles drift
-// significantly as you scroll, creating depth.
 // ---------------------------------------------------------------------------
 interface LayerConfig {
   scrollSpeed: number;
@@ -30,59 +28,31 @@ interface LayerConfig {
 
 const LAYERS: LayerConfig[] = [
   {
-    // Far — nearly static backdrop, like distant stars
-    scrollSpeed: 0.02,
-    count: 20,
-    sizeRange: [1, 2.2],
-    alphaRange: [0.05, 0.12],
-    connectionDist: 80,
-    lineWidth: 0.3,
-    drift: 0.04,
-    nodeRatio: 0.1,
+    scrollSpeed: 0.02, count: 20,
+    sizeRange: [1, 2.2], alphaRange: [0.05, 0.12],
+    connectionDist: 80, lineWidth: 0.3, drift: 0.04, nodeRatio: 0.1,
   },
   {
-    // Mid — primary structure, moderate shift
-    scrollSpeed: 0.2,
-    count: 50,
-    sizeRange: [3.5, 6],
-    alphaRange: [0.2, 0.4],
-    connectionDist: 170,
-    lineWidth: 0.65,
-    drift: 0.18,
-    nodeRatio: 0.2,
+    scrollSpeed: 0.2, count: 50,
+    sizeRange: [3.5, 6], alphaRange: [0.2, 0.4],
+    connectionDist: 170, lineWidth: 0.65, drift: 0.18, nodeRatio: 0.2,
   },
   {
-    // Near — bold foreground, moves dramatically past you
-    scrollSpeed: 0.65,
-    count: 60,
-    sizeRange: [7.5, 9],
-    alphaRange: [0.35, 0.55],
-    connectionDist: 200,
-    lineWidth: 0.8,
-    drift: 0.3,
-    nodeRatio: 0.25,
+    scrollSpeed: 0.65, count: 60,
+    sizeRange: [7.5, 9], alphaRange: [0.35, 0.55],
+    connectionDist: 200, lineWidth: 0.8, drift: 0.3, nodeRatio: 0.25,
   },
 ];
 
 interface Particle {
-  x: number;
-  y: number;
-  vx: number;
-  vy: number;
-  r: number;
-  alpha: number;
-  isNode: boolean;
-  layer: number;
-  idx: number;
-  phase: number;
-  memberImgIdx: number;
-  renderY: number;
-  hasCross: boolean;
+  x: number; y: number; vx: number; vy: number;
+  r: number; alpha: number; isNode: boolean;
+  layer: number; idx: number; phase: number;
+  memberImgIdx: number; renderY: number; hasCross: boolean;
 }
 
 interface LayerFrameBuffers {
-  x: Float32Array;
-  y: Float32Array;
+  x: Float32Array; y: Float32Array;
   bucketCounts: Uint16Array;
   lineBuckets: [Float32Array, Float32Array, Float32Array, Float32Array];
 }
@@ -93,18 +63,136 @@ const CANVAS_PERF_DEBUG =
   typeof window !== "undefined" &&
   new URLSearchParams(window.location.search).get("canvas_perf") === "1";
 
-const FIREFOX_QUALITY_PROFILES = [
-  { particleFraction: 0.5, lineFrameStride: 1, lineDistanceScale: 0, showDecorations: false },
-  { particleFraction: 0.75, lineFrameStride: 1, lineDistanceScale: 0, showDecorations: false },
-  { particleFraction: 1, lineFrameStride: 1, lineDistanceScale: 0, showDecorations: false },
-] as const;
+// ---------------------------------------------------------------------------
+// WebGL point-sprite renderer — renders ALL particles in a single draw call.
+// Used on Firefox where Canvas 2D is fundamentally CPU-bound and slow.
+// ---------------------------------------------------------------------------
+function createGLRenderer(canvas: HTMLCanvasElement, accentRgb: string) {
+  const gl = canvas.getContext("webgl", {
+    alpha: true, premultipliedAlpha: true, desynchronized: true, antialias: false,
+  });
+  if (!gl) return null;
 
-const FIREFOX_RENDER_INTERVALS = {
-  idle: 1000 / 30,
-  scroll: 1000 / 24,
-  fastScroll: 1000 / 18,
-  overloaded: 1000 / 14,
-} as const;
+  const rgb = accentRgb.split(",").map((s) => parseFloat(s.trim()) / 255);
+
+  const vsSrc = `
+    attribute vec2 a_pos;
+    attribute float a_size;
+    attribute float a_alpha;
+    uniform vec2 u_res;
+    uniform float u_scale;
+    varying float v_alpha;
+    void main() {
+      vec2 c = (a_pos / u_res) * 2.0 - 1.0;
+      c.y = -c.y;
+      gl_Position = vec4(c, 0.0, 1.0);
+      gl_PointSize = a_size * 2.0 * u_scale;
+      v_alpha = a_alpha;
+    }`;
+  const fsSrc = `
+    precision mediump float;
+    uniform vec3 u_color;
+    varying float v_alpha;
+    void main() {
+      float d = length(gl_PointCoord - vec2(0.5));
+      if (d > 0.5) discard;
+      float a = v_alpha * smoothstep(0.5, 0.32, d);
+      gl_FragColor = vec4(u_color * a, a);
+    }`;
+
+  function compile(type: number, src: string) {
+    const s = gl!.createShader(type)!;
+    gl!.shaderSource(s, src);
+    gl!.compileShader(s);
+    return s;
+  }
+  const vs = compile(gl.VERTEX_SHADER, vsSrc);
+  const fs = compile(gl.FRAGMENT_SHADER, fsSrc);
+  const prog = gl.createProgram()!;
+  gl.attachShader(prog, vs);
+  gl.attachShader(prog, fs);
+  gl.linkProgram(prog);
+  gl.useProgram(prog);
+
+  const aPos = gl.getAttribLocation(prog, "a_pos");
+  const aSize = gl.getAttribLocation(prog, "a_size");
+  const aAlpha = gl.getAttribLocation(prog, "a_alpha");
+  const uRes = gl.getUniformLocation(prog, "u_res");
+  const uScale = gl.getUniformLocation(prog, "u_scale");
+  const uColor = gl.getUniformLocation(prog, "u_color");
+
+  const posBuf = gl.createBuffer()!;
+  const sizeBuf = gl.createBuffer()!;
+  const alphaBuf = gl.createBuffer()!;
+
+  const MAX = 300;
+  const posArr = new Float32Array(MAX * 2);
+  const sizeArr = new Float32Array(MAX);
+  const alphaArr = new Float32Array(MAX);
+
+  gl.enable(gl.BLEND);
+  gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
+  gl.uniform3f(uColor, rgb[0]!, rgb[1]!, rgb[2]!);
+
+  let curW = 0, curH = 0;
+
+  return {
+    resize(w: number, h: number, scale: number) {
+      const cw = Math.max(1, Math.floor(w * scale));
+      const ch = Math.max(1, Math.floor(h * scale));
+      if (canvas.width !== cw || canvas.height !== ch) {
+        canvas.width = cw;
+        canvas.height = ch;
+        canvas.style.width = `${w}px`;
+        canvas.style.height = `${h}px`;
+      }
+      curW = w; curH = h;
+      gl!.viewport(0, 0, cw, ch);
+    },
+    render(particles: Particle[], w: number, h: number, scale: number) {
+      if (curW !== w || curH !== h) this.resize(w, h, scale);
+      gl!.clearColor(0, 0, 0, 0);
+      gl!.clear(gl!.COLOR_BUFFER_BIT);
+      gl!.useProgram(prog);
+      gl!.uniform2f(uRes, w, h);
+      gl!.uniform1f(uScale, scale);
+
+      const n = Math.min(particles.length, MAX);
+      for (let i = 0; i < n; i++) {
+        const p = particles[i]!;
+        posArr[i * 2] = p.x;
+        posArr[i * 2 + 1] = p.renderY;
+        sizeArr[i] = p.r;
+        alphaArr[i] = p.alpha;
+      }
+
+      gl!.bindBuffer(gl!.ARRAY_BUFFER, posBuf);
+      gl!.bufferData(gl!.ARRAY_BUFFER, posArr.subarray(0, n * 2), gl!.DYNAMIC_DRAW);
+      gl!.enableVertexAttribArray(aPos);
+      gl!.vertexAttribPointer(aPos, 2, gl!.FLOAT, false, 0, 0);
+
+      gl!.bindBuffer(gl!.ARRAY_BUFFER, sizeBuf);
+      gl!.bufferData(gl!.ARRAY_BUFFER, sizeArr.subarray(0, n), gl!.DYNAMIC_DRAW);
+      gl!.enableVertexAttribArray(aSize);
+      gl!.vertexAttribPointer(aSize, 1, gl!.FLOAT, false, 0, 0);
+
+      gl!.bindBuffer(gl!.ARRAY_BUFFER, alphaBuf);
+      gl!.bufferData(gl!.ARRAY_BUFFER, alphaArr.subarray(0, n), gl!.DYNAMIC_DRAW);
+      gl!.enableVertexAttribArray(aAlpha);
+      gl!.vertexAttribPointer(aAlpha, 1, gl!.FLOAT, false, 0, 0);
+
+      gl!.drawArrays(gl!.POINTS, 0, n);
+    },
+    destroy() {
+      gl!.deleteProgram(prog);
+      gl!.deleteShader(vs);
+      gl!.deleteShader(fs);
+      gl!.deleteBuffer(posBuf);
+      gl!.deleteBuffer(sizeBuf);
+      gl!.deleteBuffer(alphaBuf);
+    },
+  };
+}
 
 export function ParallaxMoleculeCanvas({
   isDark,
@@ -127,32 +215,18 @@ export function ParallaxMoleculeCanvas({
 
   useEffect(() => {
     if (ALL_MODE) {
-      console.log(`[ParallaxCanvas] ALL_MODE active, loading ${allMemberUrls.length} member images...`);
       let done = 0;
       const imgs: HTMLImageElement[] = [];
       for (const url of allMemberUrls) {
         const img = new Image();
-        img.onload = () => {
-          done++;
-          console.log(`[ParallaxCanvas] Image loaded (${done}/${allMemberUrls.length}): ${url.slice(-30)}`);
-          if (!allImgsLoadedRef.current) {
-            allImgsRef.current = imgs;
-            allImgsLoadedRef.current = true;
-          }
-        };
-        img.onerror = () => {
-          done++;
-          console.warn(`[ParallaxCanvas] Image FAILED (${done}/${allMemberUrls.length}): ${url.slice(-30)}`);
-        };
+        img.onload = () => { done++; if (!allImgsLoadedRef.current) { allImgsRef.current = imgs; allImgsLoadedRef.current = true; } };
+        img.onerror = () => { done++; };
         img.src = url;
         imgs.push(img);
       }
     } else if (MEMBER_IMG_URL) {
       const img = new Image();
-      img.onload = () => {
-        memberImgRef.current = img;
-        memberLoadedRef.current = true;
-      };
+      img.onload = () => { memberImgRef.current = img; memberLoadedRef.current = true; };
       img.src = MEMBER_IMG_URL;
     }
   }, []);
@@ -160,28 +234,21 @@ export function ParallaxMoleculeCanvas({
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
-    const ctx = canvas.getContext("2d", { desynchronized: true });
-    if (!ctx) return;
 
     const isFirefox = IS_FIREFOX;
-    const firefoxDensityScale = 0.4;
-    const firefoxRenderScale = 0.5;
-    const renderScale = isFirefox ? firefoxRenderScale : 1;
-    const minFrameTime = isFirefox ? 1000 / 40 : 0;
+
+    // --- Try WebGL first (all browsers), fall back to Canvas 2D ---
+    const glRenderer = createGLRenderer(canvas, accentRgb);
+    const useWebGL = !!glRenderer;
+    const ctx = useWebGL ? null : canvas.getContext("2d", { desynchronized: true });
+    if (!useWebGL && !ctx) return;
+
+    const densityScale = useWebGL ? 1 : 1;
+    const renderScale = useWebGL ? 0.75 : 1;
+
     const scrollOffsets = new Float32Array(LAYERS.length);
     const colorCache = new Map<number, string>();
-    const spriteCache = new Map<string, HTMLCanvasElement>();
-    const perfHost = window as Window & {
-      __parallaxCanvasPerf?: {
-        fps: number;
-        frameMs: number;
-        drawMs: number;
-        particles: number;
-        quality: number;
-        firefox: boolean;
-        scrolling: boolean;
-      };
-    };
+    const perfHost = window as Window & { __parallaxCanvasPerf?: Record<string, unknown> };
     let lastFrameTime = 0;
     let lastVisualRender = 0;
     let frameCount = 0;
@@ -190,12 +257,7 @@ export function ParallaxMoleculeCanvas({
     let currentFps = 0;
     let emaFrameMs = 16.7;
     let emaDrawMs = 8;
-    let qualityLevel = isFirefox ? 1 : 2;
-    let qualityCooldown = 0;
     let scrollActiveUntil = 0;
-    let lastScrollEventTime = performance.now();
-    let lastScrollSampleY = window.scrollY;
-    let scrollVelocity = 0;
     let viewportWidth = window.innerWidth;
     let viewportHeight = window.innerHeight;
     let layerBuffers: LayerFrameBuffers[] = [];
@@ -210,51 +272,8 @@ export function ParallaxMoleculeCanvas({
       return value;
     };
 
-    const getParticleSprite = (radius: number, isNode: boolean, hasCross: boolean) => {
-      const key = `${Math.round(radius * 10)}:${isNode ? 1 : 0}:${hasCross ? 1 : 0}`;
-      const cached = spriteCache.get(key);
-      if (cached) return cached;
-
-      const pad = hasCross ? 8 : isNode ? 6 : 2;
-      const size = Math.ceil((radius + pad) * 2 + 2);
-      const sprite = document.createElement("canvas");
-      sprite.width = size;
-      sprite.height = size;
-      const spriteCtx = sprite.getContext("2d");
-      if (!spriteCtx) return sprite;
-
-      const center = size * 0.5;
-      spriteCtx.fillStyle = `rgb(${accentRgb})`;
-      spriteCtx.beginPath();
-      spriteCtx.arc(center, center, radius, 0, Math.PI * 2);
-      spriteCtx.fill();
-
-      if (isNode) {
-        spriteCtx.strokeStyle = `rgba(${accentRgb}, 0.3)`;
-        spriteCtx.lineWidth = 0.5;
-        spriteCtx.beginPath();
-        spriteCtx.arc(center, center, radius + 5, 0, Math.PI * 2);
-        spriteCtx.stroke();
-      }
-
-      if (hasCross) {
-        spriteCtx.strokeStyle = `rgba(${accentRgb}, 0.4)`;
-        spriteCtx.lineWidth = 0.5;
-        spriteCtx.beginPath();
-        spriteCtx.moveTo(center - 6, center);
-        spriteCtx.lineTo(center + 6, center);
-        spriteCtx.moveTo(center, center - 6);
-        spriteCtx.lineTo(center, center + 6);
-        spriteCtx.stroke();
-      }
-
-      spriteCache.set(key, sprite);
-      return sprite;
-    };
-
     const initParticles = (w: number, h: number) => {
       const particles: Particle[] = [];
-      const densityScale = isFirefox ? firefoxDensityScale : 1;
       const scale = Math.min(1, (w * h) / (1920 * 1080)) * densityScale;
       let globalIdx = 0;
       for (let li = 0; li < LAYERS.length; li++) {
@@ -265,19 +284,16 @@ export function ParallaxMoleculeCanvas({
         for (let i = 0; i < count; i++) {
           const memberScale = MEMBER_MODE ? 2.5 : 1;
           particles.push({
-            x: Math.random() * w,
-            y: Math.random() * h,
+            x: Math.random() * w, y: Math.random() * h,
             vx: (Math.random() - 0.5) * cfg.drift * 2,
             vy: (Math.random() - 0.5) * cfg.drift * 2,
             r: (sMin + Math.random() * (sMax - sMin)) * memberScale,
             alpha: aMin + Math.random() * (aMax - aMin),
             isNode: i < count * cfg.nodeRatio,
-            layer: li,
-            idx: i,
+            layer: li, idx: i,
             phase: Math.random() * Math.PI * 2,
             memberImgIdx: ALL_MODE ? globalIdx % allMemberUrls.length : 0,
-            renderY: 0,
-            hasCross: i % 7 === 0,
+            renderY: 0, hasCross: i % 7 === 0,
           });
           globalIdx++;
         }
@@ -290,17 +306,11 @@ export function ParallaxMoleculeCanvas({
       for (const g of layerGroups) g.length = 0;
       for (const p of particlesRef.current) layerGroups[p.layer]!.push(p);
       layerBuffers = layerGroups.map((group) => {
-        const pairCapacity = Math.max(4, group.length * (group.length - 1) * 2);
+        const cap = Math.max(4, group.length * (group.length - 1) * 2);
         return {
-          x: new Float32Array(group.length),
-          y: new Float32Array(group.length),
+          x: new Float32Array(group.length), y: new Float32Array(group.length),
           bucketCounts: new Uint16Array(4),
-          lineBuckets: [
-            new Float32Array(pairCapacity),
-            new Float32Array(pairCapacity),
-            new Float32Array(pairCapacity),
-            new Float32Array(pairCapacity),
-          ],
+          lineBuckets: [new Float32Array(cap), new Float32Array(cap), new Float32Array(cap), new Float32Array(cap)],
         };
       });
     };
@@ -308,61 +318,40 @@ export function ParallaxMoleculeCanvas({
     const resize = () => {
       viewportWidth = window.innerWidth;
       viewportHeight = window.innerHeight;
-      canvas.width = Math.max(1, Math.floor(viewportWidth * renderScale));
-      canvas.height = Math.max(1, Math.floor(viewportHeight * renderScale));
-      canvas.style.width = `${viewportWidth}px`;
-      canvas.style.height = `${viewportHeight}px`;
-      ctx.setTransform(renderScale, 0, 0, renderScale, 0, 0);
-      ctx.imageSmoothingEnabled = true;
+      if (useWebGL) {
+        glRenderer!.resize(viewportWidth, viewportHeight, renderScale);
+      } else {
+        canvas.width = Math.max(1, Math.floor(viewportWidth * renderScale));
+        canvas.height = Math.max(1, Math.floor(viewportHeight * renderScale));
+        canvas.style.width = `${viewportWidth}px`;
+        canvas.style.height = `${viewportHeight}px`;
+        ctx!.setTransform(renderScale, 0, 0, renderScale, 0, 0);
+        ctx!.imageSmoothingEnabled = true;
+      }
       if (particlesRef.current.length === 0) {
         initParticles(viewportWidth, viewportHeight);
         rebuildLayerGroups();
       }
     };
-    
     resize();
     window.addEventListener("resize", resize);
 
     const handleScroll = () => {
       const nextY = window.scrollY;
       const now = performance.now();
-      const delta = Math.abs(nextY - lastScrollSampleY);
-      const elapsed = Math.max(16, now - lastScrollEventTime);
-      scrollVelocity = (delta / elapsed) * 16.67;
       scrollActiveUntil = now + 140;
-      lastScrollEventTime = now;
-      lastScrollSampleY = nextY;
       scrollRef.current = nextY;
     };
     window.addEventListener("scroll", handleScroll, { passive: true });
 
-    const handleMouseMove = (e: MouseEvent) => {
-      mouseRef.current = { x: e.clientX, y: e.clientY };
-    };
+    const handleMouseMove = (e: MouseEvent) => { mouseRef.current = { x: e.clientX, y: e.clientY }; };
     window.addEventListener("mousemove", handleMouseMove);
-
-    const handleMouseLeave = () => {
-      mouseRef.current = { x: -9999, y: -9999 };
-    };
+    const handleMouseLeave = () => { mouseRef.current = { x: -9999, y: -9999 }; };
     document.addEventListener("mouseleave", handleMouseLeave);
 
     const animate = (timestamp: number) => {
       const now = performance.now();
       const isScrollActive = now < scrollActiveUntil;
-      const firefoxRenderInterval = !isFirefox
-        ? 0
-        : emaDrawMs > 28
-          ? FIREFOX_RENDER_INTERVALS.overloaded
-          : isScrollActive
-            ? scrollVelocity > 90
-              ? FIREFOX_RENDER_INTERVALS.fastScroll
-              : FIREFOX_RENDER_INTERVALS.scroll
-            : FIREFOX_RENDER_INTERVALS.idle;
-      const minRenderInterval = Math.max(minFrameTime, firefoxRenderInterval);
-      if (minRenderInterval > 0 && timestamp - lastVisualRender < minRenderInterval) {
-        animationRef.current = requestAnimationFrame(animate);
-        return;
-      }
 
       lastVisualRender = timestamp;
       const deltaMs = lastFrameTime === 0 ? 1000 / 60 : Math.min(100, timestamp - lastFrameTime);
@@ -375,8 +364,6 @@ export function ParallaxMoleculeCanvas({
 
       const w = viewportWidth;
       const h = viewportHeight;
-      ctx.clearRect(0, 0, w, h);
-
       const particles = particlesRef.current;
       if (layerGroups[0]!.length === 0) rebuildLayerGroups();
       const scrollY = scrollRef.current;
@@ -384,12 +371,10 @@ export function ParallaxMoleculeCanvas({
       timeRef.current += 0.006 * frameScale;
       const time = timeRef.current;
 
-      // Pre-compute scroll offsets per layer
       const buf = 80;
       const wrapH = h + buf * 2;
       for (let i = 0; i < LAYERS.length; i++) scrollOffsets[i] = -scrollY * LAYERS[i]!.scrollSpeed;
 
-      // Inline renderedY to avoid function call overhead in hot loops
       const renderedY = (p: Particle) => {
         const raw = p.y + scrollOffsets[p.layer]!;
         return ((raw % wrapH) + wrapH) % wrapH - buf;
@@ -399,43 +384,25 @@ export function ParallaxMoleculeCanvas({
         particles[i]!.renderY = renderedY(particles[i]!);
       }
 
-      // --- Physics (per-layer to skip cross-layer checks) ---
-      const effectiveQualityLevel = isFirefox
-        ? isScrollActive
-          ? scrollVelocity > 90
-            ? Math.min(qualityLevel, 1)
-            : qualityLevel
-          : qualityLevel
-        : 2;
-      const qualityProfile = FIREFOX_QUALITY_PROFILES[effectiveQualityLevel];
-
-      // Skip O(n²) inter-particle repulsion entirely on Firefox — barely
-      // noticeable visually but saves ~1000+ comparisons per frame.
-      if (!isFirefox) {
-        const repelDist = 30;
-        const repelDistSq = repelDist * repelDist;
-        for (let li = 0; li < LAYERS.length; li++) {
-          const group = layerGroups[li]!;
-          const activeCount = Math.max(3, Math.floor(group.length * qualityProfile.particleFraction));
-          for (let i = 0; i < activeCount; i++) {
-            const pI = group[i]!;
-            for (let j = i + 1; j < activeCount; j++) {
-              const pJ = group[j]!;
-              const ddx = pI.x - pJ.x;
-              if (ddx > repelDist || ddx < -repelDist) continue;
-              const ddy = pI.renderY - pJ.renderY;
-              if (ddy > repelDist || ddy < -repelDist) continue;
-              const ddSq = ddx * ddx + ddy * ddy;
-              if (ddSq < repelDistSq && ddSq > 0) {
-                const dd = Math.sqrt(ddSq);
-                const f = ((repelDist - dd) / repelDist) * 0.04 * frameScale;
-                const fx = (ddx / dd) * f;
-                const fy = (ddy / dd) * f;
-                pI.vx += fx;
-                pI.vy += fy;
-                pJ.vx -= fx;
-                pJ.vy -= fy;
-              }
+      // --- Physics ---
+      const repelDist = 30;
+      const repelDistSq = repelDist * repelDist;
+      for (let li = 0; li < LAYERS.length; li++) {
+        const group = layerGroups[li]!;
+        for (let i = 0; i < group.length; i++) {
+          const pI = group[i]!;
+          for (let j = i + 1; j < group.length; j++) {
+            const pJ = group[j]!;
+            const ddx = pI.x - pJ.x;
+            if (ddx > repelDist || ddx < -repelDist) continue;
+            const ddy = pI.renderY - pJ.renderY;
+            if (ddy > repelDist || ddy < -repelDist) continue;
+            const ddSq = ddx * ddx + ddy * ddy;
+            if (ddSq < repelDistSq && ddSq > 0) {
+              const dd = Math.sqrt(ddSq);
+              const f = ((repelDist - dd) / repelDist) * 0.04 * frameScale;
+              const fx = (ddx / dd) * f; const fy = (ddy / dd) * f;
+              pI.vx += fx; pI.vy += fy; pJ.vx -= fx; pJ.vy -= fy;
             }
           }
         }
@@ -444,14 +411,12 @@ export function ParallaxMoleculeCanvas({
       const mouseActive = mouse.x > -9000;
       const repelR = MEMBER_MODE ? 250 : 160;
       const repelRSq = repelR * repelR;
-      const edgeZone = isFirefox ? 0 : w * 0.18;
+      const edgeZone = w * 0.18;
 
       for (let i = 0; i < particles.length; i++) {
         const p = particles[i]!;
-        // Mouse repulsion (O(n) — keep on Firefox for interactivity)
         if (mouseActive) {
-          const dx = p.x - mouse.x;
-          const dy = p.renderY - mouse.y;
+          const dx = p.x - mouse.x; const dy = p.renderY - mouse.y;
           const distSq = dx * dx + dy * dy;
           if (distSq < repelRSq && distSq > 0) {
             const dist = Math.sqrt(distSq);
@@ -460,238 +425,172 @@ export function ParallaxMoleculeCanvas({
             p.vy += (dy / dist) * force * 0.2 * frameScale;
           }
         }
-
-        // Edge repulsion in hero viewport (skip on Firefox)
-        if (edgeZone > 0) {
-          if (p.renderY - scrollY > -50 && p.renderY - scrollY < h) {
-            if (p.x < edgeZone) {
-              const t = 1 - p.x / edgeZone;
-              p.vx += t * t * 0.15 * frameScale;
-            } else if (p.x > w - edgeZone) {
-              const t = 1 - (w - p.x) / edgeZone;
-              p.vx -= t * t * 0.15 * frameScale;
-            }
-          }
+        if (edgeZone > 0 && p.renderY - scrollY > -50 && p.renderY - scrollY < h) {
+          if (p.x < edgeZone) { const t = 1 - p.x / edgeZone; p.vx += t * t * 0.15 * frameScale; }
+          else if (p.x > w - edgeZone) { const t = 1 - (w - p.x) / edgeZone; p.vx -= t * t * 0.15 * frameScale; }
         }
-
-        // Drift + damping
         p.vx += (Math.random() - 0.5) * 0.03 * frameScale;
         p.vy += (Math.random() - 0.5) * 0.03 * frameScale;
-        p.vx *= damping;
-        p.vy *= damping;
-        p.x += p.vx * frameScale;
-        p.y += p.vy * frameScale;
-
-        if (p.x < -50) p.x += w + 100;
-        if (p.x > w + 50) p.x -= w + 100;
-        if (p.y < -buf) p.y += wrapH;
-        if (p.y > h + buf) p.y -= wrapH;
+        p.vx *= damping; p.vy *= damping;
+        p.x += p.vx * frameScale; p.y += p.vy * frameScale;
+        if (p.x < -50) p.x += w + 100; if (p.x > w + 50) p.x -= w + 100;
+        if (p.y < -buf) p.y += wrapH; if (p.y > h + buf) p.y -= wrapH;
         p.renderY = renderedY(p);
       }
 
-      // --- Render layers far → near (painter's order) ---
-      const useSingleImg = MEMBER_IMG_URL && memberLoadedRef.current && memberImgRef.current;
-      const useAllImgs = ALL_MODE && allImgsLoadedRef.current && allImgsRef.current.length > 0;
-
-      for (let li = 0; li < LAYERS.length; li++) {
-        const cfg = LAYERS[li]!;
-        const group = layerGroups[li]!;
-        const buffers = layerBuffers[li]!;
-        const rpx = buffers.x;
-        const rpy = buffers.y;
-        const activeCount = Math.max(3, Math.floor(group.length * qualityProfile.particleFraction));
-        const shouldDrawLines =
-          !isScrollActive &&
-          qualityProfile.lineDistanceScale > 0 &&
-          frameCount % qualityProfile.lineFrameStride === 0;
-        const connDist = cfg.connectionDist * qualityProfile.lineDistanceScale;
-        const connDistSq = connDist * connDist;
-        const avgAlpha = (cfg.alphaRange[0] + cfg.alphaRange[1]) * 0.5;
-
-        // Compute rendered positions into a reusable buffer
-        for (let i = 0; i < activeCount; i++) {
-          rpx[i] = group[i]!.x;
-          rpy[i] = group[i]!.renderY;
+      // =====================================================================
+      // RENDER — WebGL path (Firefox) vs Canvas 2D path (Chrome/Edge)
+      // =====================================================================
+      if (useWebGL) {
+        // Single GPU draw call for ALL particles
+        const visible: Particle[] = [];
+        for (let i = 0; i < particles.length; i++) {
+          const p = particles[i]!;
+          if (p.renderY > -20 && p.renderY < h + 20 && p.x > -20 && p.x < w + 20) {
+            visible.push(p);
+          }
         }
+        glRenderer!.render(visible, w, h, renderScale);
+      } else {
+        // --- Canvas 2D path (unchanged for Chrome/Edge) ---
+        ctx!.clearRect(0, 0, w, h);
+        const useSingleImg = MEMBER_IMG_URL && memberLoadedRef.current && memberImgRef.current;
+        const useAllImgs = ALL_MODE && allImgsLoadedRef.current && allImgsRef.current.length > 0;
 
-        // Batch connections by approximate alpha without allocating per-frame objects.
-        const bucketCounts = buffers.bucketCounts;
-        bucketCounts[0] = 0;
-        bucketCounts[1] = 0;
-        bucketCounts[2] = 0;
-        bucketCounts[3] = 0;
-        if (shouldDrawLines) {
+        for (let li = 0; li < LAYERS.length; li++) {
+          const cfg = LAYERS[li]!;
+          const group = layerGroups[li]!;
+          const buffers = layerBuffers[li]!;
+          const rpx = buffers.x;
+          const rpy = buffers.y;
+          const activeCount = group.length;
+          const connDist = cfg.connectionDist;
+          const connDistSq = connDist * connDist;
+          const avgAlpha = (cfg.alphaRange[0] + cfg.alphaRange[1]) * 0.5;
+
           for (let i = 0; i < activeCount; i++) {
-            const ax = rpx[i]!;
-            const ay = rpy[i]!;
-            for (let j = i + 1; j < activeCount; j++) {
-              const dx = ax - rpx[j]!;
-              if (dx > connDist || dx < -connDist) continue;
-              const dy = ay - rpy[j]!;
-              if (dy > connDist || dy < -connDist) continue;
-              const distSq = dx * dx + dy * dy;
-              if (distSq < connDistSq) {
-                const dist = Math.sqrt(distSq);
-                const alpha = (1 - dist / connDist) * avgAlpha;
-                const bucket = Math.min(3, (alpha * 4) | 0);
-                const lineBuffer = buffers.lineBuckets[bucket]!;
-                const offset = bucketCounts[bucket] * 4;
-                lineBuffer[offset] = ax;
-                lineBuffer[offset + 1] = ay;
-                lineBuffer[offset + 2] = rpx[j]!;
-                lineBuffer[offset + 3] = rpy[j]!;
-                bucketCounts[bucket]++;
+            rpx[i] = group[i]!.x;
+            rpy[i] = group[i]!.renderY;
+          }
+
+          // Connection lines
+          const bucketCounts = buffers.bucketCounts;
+          bucketCounts[0] = 0; bucketCounts[1] = 0; bucketCounts[2] = 0; bucketCounts[3] = 0;
+          if (!isScrollActive) {
+            for (let i = 0; i < activeCount; i++) {
+              const ax = rpx[i]!; const ay = rpy[i]!;
+              for (let j = i + 1; j < activeCount; j++) {
+                const dx = ax - rpx[j]!;
+                if (dx > connDist || dx < -connDist) continue;
+                const dy = ay - rpy[j]!;
+                if (dy > connDist || dy < -connDist) continue;
+                const distSq = dx * dx + dy * dy;
+                if (distSq < connDistSq) {
+                  const dist = Math.sqrt(distSq);
+                  const alpha = (1 - dist / connDist) * avgAlpha;
+                  const bucket = Math.min(3, (alpha * 4) | 0);
+                  const lb = buffers.lineBuckets[bucket]!;
+                  const off = bucketCounts[bucket]! * 4;
+                  lb[off] = ax; lb[off + 1] = ay; lb[off + 2] = rpx[j]!; lb[off + 3] = rpy[j]!;
+                  bucketCounts[bucket]!++;
+                }
               }
             }
           }
-        }
 
-        // Draw connection batches (one beginPath/stroke per bucket)
-        ctx.lineWidth = cfg.lineWidth;
-        for (let b = 0; b < 4; b++) {
-          const lineCount = bucketCounts[b]!;
-          if (lineCount === 0) continue;
-          const lines = buffers.lineBuckets[b]!;
-          const midAlpha = (b + 0.5) / 4 * avgAlpha;
-          ctx.strokeStyle = toRgba(midAlpha);
-          ctx.beginPath();
-          for (let k = 0; k < lineCount * 4; k += 4) {
-            ctx.moveTo(lines[k]!, lines[k + 1]!);
-            ctx.lineTo(lines[k + 2]!, lines[k + 3]!);
+          ctx!.lineWidth = cfg.lineWidth;
+          for (let b = 0; b < 4; b++) {
+            const lc = bucketCounts[b]!;
+            if (lc === 0) continue;
+            const lines = buffers.lineBuckets[b]!;
+            ctx!.strokeStyle = toRgba((b + 0.5) / 4 * avgAlpha);
+            ctx!.beginPath();
+            for (let k = 0; k < lc * 4; k += 4) {
+              ctx!.moveTo(lines[k]!, lines[k + 1]!);
+              ctx!.lineTo(lines[k + 2]!, lines[k + 3]!);
+            }
+            ctx!.stroke();
           }
-          ctx.stroke();
-        }
 
-        // Particles
-        if (!useSingleImg && !useAllImgs) {
-          for (let i = 0; i < activeCount; i++) {
-            const p = group[i]!;
-            const px = rpx[i]!;
-            const py = rpy[i]!;
-            if (px < -20 || px > w + 20 || py < -20 || py > h + 20) continue;
+          // Particles
+          if (!useSingleImg && !useAllImgs) {
+            for (let i = 0; i < activeCount; i++) {
+              const p = group[i]!;
+              const px = rpx[i]!; const py = rpy[i]!;
+              if (px < -20 || px > w + 20 || py < -20 || py > h + 20) continue;
+              const breathe = Math.sin(time * 1.8 + p.phase) * 0.05;
+              const a = Math.max(0, p.alpha + breathe);
 
-            // Skip per-particle sin() on Firefox — use static alpha
-            const a = isFirefox ? p.alpha : Math.max(0, p.alpha + Math.sin(time * 1.8 + p.phase) * 0.05);
+              ctx!.fillStyle = toRgba(a);
+              ctx!.beginPath();
+              ctx!.arc(px, py, p.r, 0, Math.PI * 2);
+              ctx!.fill();
 
-            if (isFirefox) {
-              const sprite = getParticleSprite(
-                p.r,
-                qualityProfile.showDecorations && p.isNode,
-                qualityProfile.showDecorations && p.hasCross,
-              );
-              ctx.globalAlpha = a;
-              ctx.drawImage(sprite, px - sprite.width * 0.5, py - sprite.height * 0.5);
-              ctx.globalAlpha = 1;
-            } else {
-              ctx.fillStyle = toRgba(a);
-              ctx.beginPath();
-              ctx.arc(px, py, p.r, 0, Math.PI * 2);
-              ctx.fill();
-
-              if (qualityProfile.showDecorations && p.isNode) {
-                ctx.beginPath();
-                ctx.arc(px, py, p.r + 5, 0, Math.PI * 2);
-                ctx.strokeStyle = toRgba(a * 0.3);
-                ctx.lineWidth = 0.5;
-                ctx.stroke();
+              if (p.isNode) {
+                ctx!.beginPath();
+                ctx!.arc(px, py, p.r + 5, 0, Math.PI * 2);
+                ctx!.strokeStyle = toRgba(a * 0.3);
+                ctx!.lineWidth = 0.5;
+                ctx!.stroke();
               }
-
-              if (qualityProfile.showDecorations && p.hasCross) {
-                ctx.beginPath();
-                ctx.moveTo(px - 6, py);
-                ctx.lineTo(px + 6, py);
-                ctx.moveTo(px, py - 6);
-                ctx.lineTo(px, py + 6);
-                ctx.strokeStyle = toRgba(a * 0.4);
-                ctx.lineWidth = 0.5;
-                ctx.stroke();
+              if (p.hasCross) {
+                ctx!.beginPath();
+                ctx!.moveTo(px - 6, py); ctx!.lineTo(px + 6, py);
+                ctx!.moveTo(px, py - 6); ctx!.lineTo(px, py + 6);
+                ctx!.strokeStyle = toRgba(a * 0.4);
+                ctx!.lineWidth = 0.5;
+                ctx!.stroke();
               }
             }
-          }
-        } else {
-          // Member image mode
-          for (let i = 0; i < activeCount; i++) {
-            const p = group[i]!;
-            const px = rpx[i]!;
-            const py = rpy[i]!;
-            if (px < -20 || px > w + 20 || py < -20 || py > h + 20) continue;
-
-            const a = isFirefox ? p.alpha : Math.max(0, p.alpha + Math.sin(time * 1.8 + p.phase) * 0.05);
-
-            const img = useAllImgs
-              ? allImgsRef.current[p.memberImgIdx]
-              : memberImgRef.current!;
-            if (!img || !img.complete || img.naturalWidth === 0) {
-              ctx.beginPath();
-              ctx.arc(px, py, p.r * 0.4, 0, Math.PI * 2);
-              ctx.fillStyle = toRgba(a);
-              ctx.fill();
-              continue;
+          } else {
+            for (let i = 0; i < activeCount; i++) {
+              const p = group[i]!;
+              const px = rpx[i]!; const py = rpy[i]!;
+              if (px < -20 || px > w + 20 || py < -20 || py > h + 20) continue;
+              const breathe = Math.sin(time * 1.8 + p.phase) * 0.05;
+              const a = Math.max(0, p.alpha + breathe);
+              const img = useAllImgs ? allImgsRef.current[p.memberImgIdx] : memberImgRef.current!;
+              if (!img || !img.complete || img.naturalWidth === 0) {
+                ctx!.beginPath(); ctx!.arc(px, py, p.r * 0.4, 0, Math.PI * 2);
+                ctx!.fillStyle = toRgba(a); ctx!.fill(); continue;
+              }
+              const minDim = Math.min(img.width, img.height);
+              const sx = (img.width - minDim) / 2; const sy = (img.height - minDim) / 2;
+              const size = p.r * 2;
+              ctx!.save();
+              ctx!.globalAlpha = a * 1.8;
+              ctx!.beginPath(); ctx!.arc(px, py, p.r, 0, Math.PI * 2); ctx!.clip();
+              ctx!.drawImage(img, sx, sy, minDim, minDim, px - p.r, py - p.r, size, size);
+              ctx!.restore();
+              ctx!.beginPath(); ctx!.arc(px, py, p.r + 2, 0, Math.PI * 2);
+              ctx!.strokeStyle = toRgba(a * 0.6); ctx!.lineWidth = 0.5; ctx!.stroke();
             }
-            const minDim = Math.min(img.width, img.height);
-            const sx = (img.width - minDim) / 2;
-            const sy = (img.height - minDim) / 2;
-            const size = p.r * 2;
-
-            ctx.save();
-            ctx.globalAlpha = a * 1.8;
-            ctx.beginPath();
-            ctx.arc(px, py, p.r, 0, Math.PI * 2);
-            ctx.clip();
-            ctx.drawImage(img, sx, sy, minDim, minDim, px - p.r, py - p.r, size, size);
-            ctx.restore();
-
-            ctx.beginPath();
-            ctx.arc(px, py, p.r + 2, 0, Math.PI * 2);
-            ctx.strokeStyle = toRgba(a * 0.6);
-            ctx.lineWidth = 0.5;
-            ctx.stroke();
           }
         }
       }
 
+      // --- Stats ---
       const drawMs = performance.now() - drawStart;
       emaFrameMs = emaFrameMs * 0.92 + deltaMs * 0.08;
       emaDrawMs = emaDrawMs * 0.92 + drawMs * 0.08;
-
       if (timestamp - fpsWindowStart >= 1000) {
         currentFps = (fpsFrameCount * 1000) / (timestamp - fpsWindowStart);
-        fpsFrameCount = 0;
-        fpsWindowStart = timestamp;
+        fpsFrameCount = 0; fpsWindowStart = timestamp;
       }
-
-      if (isFirefox) {
-        if (qualityCooldown > 0) qualityCooldown--;
-        if (qualityCooldown === 0 && emaDrawMs > 16 && qualityLevel > 0) {
-          qualityLevel--;
-          qualityCooldown = 45;
-        } else if (qualityCooldown === 0 && emaDrawMs < 8 && currentFps > 27 && qualityLevel < 2) {
-          qualityLevel++;
-          qualityCooldown = 120;
-        }
-      }
-
-      const qualityProfileForStats = isFirefox
-        ? FIREFOX_QUALITY_PROFILES[effectiveQualityLevel]
-        : FIREFOX_QUALITY_PROFILES[2];
-      const visibleParticles = layerGroups.reduce(
-        (sum, group) => sum + Math.max(3, Math.floor(group.length * qualityProfileForStats.particleFraction)),
-        0,
-      );
 
       perfHost.__parallaxCanvasPerf = {
         fps: Number(currentFps.toFixed(1)),
         frameMs: Number(emaFrameMs.toFixed(1)),
         drawMs: Number(emaDrawMs.toFixed(1)),
-        particles: visibleParticles,
-        quality: effectiveQualityLevel,
+        particles: particles.length,
+        webgl: useWebGL,
         firefox: isFirefox,
         scrolling: isScrollActive,
       };
 
       if (CANVAS_PERF_DEBUG && perfOverlayRef.current) {
         perfOverlayRef.current.textContent =
-          `canvas ${currentFps.toFixed(0)} fps | ${emaDrawMs.toFixed(1)} ms draw | q${effectiveQualityLevel} | ${visibleParticles} p${isScrollActive ? " | scroll" : ""}`;
+          `${useWebGL ? "webgl" : "2d"} ${currentFps.toFixed(0)} fps | ${emaDrawMs.toFixed(1)} ms draw | ${particles.length} p${isScrollActive ? " | scroll" : ""}`;
       }
 
       animationRef.current = requestAnimationFrame(animate);
@@ -699,12 +598,20 @@ export function ParallaxMoleculeCanvas({
 
     animationRef.current = requestAnimationFrame(animate);
 
+    const handleVisibility = () => {
+      if (document.hidden) cancelAnimationFrame(animationRef.current);
+      else { lastFrameTime = 0; animationRef.current = requestAnimationFrame(animate); }
+    };
+    document.addEventListener("visibilitychange", handleVisibility);
+
     return () => {
       cancelAnimationFrame(animationRef.current);
       window.removeEventListener("resize", resize);
       window.removeEventListener("scroll", handleScroll);
       window.removeEventListener("mousemove", handleMouseMove);
       document.removeEventListener("mouseleave", handleMouseLeave);
+      document.removeEventListener("visibilitychange", handleVisibility);
+      if (glRenderer) glRenderer.destroy();
     };
   }, [isDark, accentRgb]);
 
@@ -715,17 +622,11 @@ export function ParallaxMoleculeCanvas({
         <div
           ref={perfOverlayRef}
           style={{
-            position: "fixed",
-            right: "12px",
-            bottom: "12px",
-            zIndex: 200,
-            padding: "6px 8px",
-            borderRadius: "6px",
-            background: "rgba(0, 0, 0, 0.72)",
-            color: "#fff",
+            position: "fixed", right: "12px", bottom: "12px", zIndex: 200,
+            padding: "6px 8px", borderRadius: "6px",
+            background: "rgba(0, 0, 0, 0.72)", color: "#fff",
             font: "12px/1.2 ui-monospace, SFMono-Regular, Menlo, monospace",
-            pointerEvents: "none",
-            whiteSpace: "nowrap",
+            pointerEvents: "none", whiteSpace: "nowrap",
           }}
         />
       ) : null}
