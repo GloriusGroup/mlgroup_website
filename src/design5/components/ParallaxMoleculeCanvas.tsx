@@ -250,7 +250,6 @@ export function ParallaxMoleculeCanvas({
     const colorCache = new Map<number, string>();
     const perfHost = window as Window & { __parallaxCanvasPerf?: Record<string, unknown> };
     let lastFrameTime = 0;
-    let lastVisualRender = 0;
     let frameCount = 0;
     let fpsFrameCount = 0;
     let fpsWindowStart = performance.now();
@@ -258,9 +257,26 @@ export function ParallaxMoleculeCanvas({
     let emaFrameMs = 16.7;
     let emaDrawMs = 8;
     let scrollActiveUntil = 0;
+    // Adaptive quality — fraction of particles to render (1.0 = all, 0.3 = minimum)
+    let particleFraction = 1.0;
+    let adaptCooldown = 0;
     let viewportWidth = window.innerWidth;
     let viewportHeight = window.innerHeight;
     let layerBuffers: LayerFrameBuffers[] = [];
+    // Pre-allocated spatial hash grid for O(n) physics
+    const REPEL_DIST = 30;
+    const CELL_CAP = 8;
+    let gridCols = 0, gridRows = 0;
+    let gridCounts = new Uint8Array(0);
+    let gridCells = new Uint16Array(0);
+    const reallocGrid = () => {
+      gridCols = Math.ceil(viewportWidth / REPEL_DIST) + 3;
+      gridRows = Math.ceil((viewportHeight + 160) / REPEL_DIST) + 3;
+      const len = gridCols * gridRows;
+      gridCounts = new Uint8Array(len);
+      gridCells = new Uint16Array(len * CELL_CAP);
+    };
+    reallocGrid();
 
     const toRgba = (alpha: number) => {
       const clamped = Math.max(0, Math.min(1, alpha));
@@ -318,6 +334,7 @@ export function ParallaxMoleculeCanvas({
     const resize = () => {
       viewportWidth = window.innerWidth;
       viewportHeight = window.innerHeight;
+      reallocGrid();
       if (useWebGL) {
         glRenderer!.resize(viewportWidth, viewportHeight, renderScale);
       } else {
@@ -353,7 +370,6 @@ export function ParallaxMoleculeCanvas({
       const now = performance.now();
       const isScrollActive = now < scrollActiveUntil;
 
-      lastVisualRender = timestamp;
       const deltaMs = lastFrameTime === 0 ? 1000 / 60 : Math.min(100, timestamp - lastFrameTime);
       const frameScale = Math.min(2.5, deltaMs / (1000 / 60));
       const damping = Math.pow(0.985, frameScale);
@@ -384,25 +400,57 @@ export function ParallaxMoleculeCanvas({
         particles[i]!.renderY = renderedY(particles[i]!);
       }
 
-      // --- Physics ---
-      const repelDist = 30;
-      const repelDistSq = repelDist * repelDist;
+      // --- Physics (spatial-hash grid to avoid O(n²) full scan) ---
+      const repelDistSq = REPEL_DIST * REPEL_DIST;
+
       for (let li = 0; li < LAYERS.length; li++) {
         const group = layerGroups[li]!;
-        for (let i = 0; i < group.length; i++) {
+        const activePhysics = Math.max(3, Math.floor(group.length * particleFraction));
+        // Clear grid
+        gridCounts.fill(0);
+        // Insert particles into grid
+        for (let i = 0; i < activePhysics; i++) {
+          const p = group[i]!;
+          const cx = Math.max(0, Math.min(gridCols - 1, ((p.x + REPEL_DIST) / REPEL_DIST) | 0));
+          const cy = Math.max(0, Math.min(gridRows - 1, ((p.renderY + 80 + REPEL_DIST) / REPEL_DIST) | 0));
+          const ci = cy * gridCols + cx;
+          if (gridCounts[ci]! < CELL_CAP) {
+            gridCells[ci * CELL_CAP + gridCounts[ci]!] = i;
+            gridCounts[ci]!++;
+          }
+        }
+        // Check each particle against its own cell + right/bottom neighbors
+        // (avoids double-counting: only check cells with higher or equal index)
+        for (let i = 0; i < activePhysics; i++) {
           const pI = group[i]!;
-          for (let j = i + 1; j < group.length; j++) {
-            const pJ = group[j]!;
-            const ddx = pI.x - pJ.x;
-            if (ddx > repelDist || ddx < -repelDist) continue;
-            const ddy = pI.renderY - pJ.renderY;
-            if (ddy > repelDist || ddy < -repelDist) continue;
-            const ddSq = ddx * ddx + ddy * ddy;
-            if (ddSq < repelDistSq && ddSq > 0) {
-              const dd = Math.sqrt(ddSq);
-              const f = ((repelDist - dd) / repelDist) * 0.04 * frameScale;
-              const fx = (ddx / dd) * f; const fy = (ddy / dd) * f;
-              pI.vx += fx; pI.vy += fy; pJ.vx -= fx; pJ.vy -= fy;
+          const cx = Math.max(0, Math.min(gridCols - 1, ((pI.x + REPEL_DIST) / REPEL_DIST) | 0));
+          const cy = Math.max(0, Math.min(gridRows - 1, ((pI.renderY + 80 + REPEL_DIST) / REPEL_DIST) | 0));
+          // Check 3x3 neighborhood, but only pairs where j > i
+          for (let dy = -1; dy <= 1; dy++) {
+            const ny = cy + dy;
+            if (ny < 0 || ny >= gridRows) continue;
+            for (let dx = -1; dx <= 1; dx++) {
+              const nx = cx + dx;
+              if (nx < 0 || nx >= gridCols) continue;
+              const ni = ny * gridCols + nx;
+              const count = gridCounts[ni]!;
+              const base = ni * CELL_CAP;
+              for (let k = 0; k < count; k++) {
+                const j = gridCells[base + k]!;
+                if (j <= i) continue; // only process each pair once
+                const pJ = group[j]!;
+                const ddx = pI.x - pJ.x;
+                if (ddx > REPEL_DIST || ddx < -REPEL_DIST) continue;
+                const ddy = pI.renderY - pJ.renderY;
+                if (ddy > REPEL_DIST || ddy < -REPEL_DIST) continue;
+                const ddSq = ddx * ddx + ddy * ddy;
+                if (ddSq < repelDistSq && ddSq > 0) {
+                  const dd = Math.sqrt(ddSq);
+                  const f = ((REPEL_DIST - dd) / REPEL_DIST) * 0.04 * frameScale;
+                  const fx = (ddx / dd) * f; const fy = (ddy / dd) * f;
+                  pI.vx += fx; pI.vy += fy; pJ.vx -= fx; pJ.vy -= fy;
+                }
+              }
             }
           }
         }
@@ -442,12 +490,16 @@ export function ParallaxMoleculeCanvas({
       // RENDER — WebGL path (Firefox) vs Canvas 2D path (Chrome/Edge)
       // =====================================================================
       if (useWebGL) {
-        // Single GPU draw call for ALL particles
+        // Single GPU draw call — apply particleFraction per layer
         const visible: Particle[] = [];
-        for (let i = 0; i < particles.length; i++) {
-          const p = particles[i]!;
-          if (p.renderY > -20 && p.renderY < h + 20 && p.x > -20 && p.x < w + 20) {
-            visible.push(p);
+        for (let li = 0; li < LAYERS.length; li++) {
+          const group = layerGroups[li]!;
+          const count = Math.max(3, Math.floor(group.length * particleFraction));
+          for (let i = 0; i < count; i++) {
+            const p = group[i]!;
+            if (p.renderY > -20 && p.renderY < h + 20 && p.x > -20 && p.x < w + 20) {
+              visible.push(p);
+            }
           }
         }
         glRenderer!.render(visible, w, h, renderScale);
@@ -463,7 +515,7 @@ export function ParallaxMoleculeCanvas({
           const buffers = layerBuffers[li]!;
           const rpx = buffers.x;
           const rpy = buffers.y;
-          const activeCount = group.length;
+          const activeCount = Math.max(3, Math.floor(group.length * particleFraction));
           const connDist = cfg.connectionDist;
           const connDistSq = connDist * connDist;
           const avgAlpha = (cfg.alphaRange[0] + cfg.alphaRange[1]) * 0.5;
@@ -569,20 +621,30 @@ export function ParallaxMoleculeCanvas({
         }
       }
 
-      // --- Stats ---
+      // --- Stats & adaptive quality ---
       const drawMs = performance.now() - drawStart;
       emaFrameMs = emaFrameMs * 0.92 + deltaMs * 0.08;
       emaDrawMs = emaDrawMs * 0.92 + drawMs * 0.08;
       if (timestamp - fpsWindowStart >= 1000) {
         currentFps = (fpsFrameCount * 1000) / (timestamp - fpsWindowStart);
         fpsFrameCount = 0; fpsWindowStart = timestamp;
+
+        // Adapt particle count based on sustained FPS
+        if (adaptCooldown > 0) { adaptCooldown--; }
+        else if (currentFps < 28 && particleFraction > 0.3) {
+          particleFraction = Math.max(0.3, particleFraction - 0.15);
+          adaptCooldown = 3; // wait 3s before next change
+        } else if (currentFps > 50 && particleFraction < 1.0) {
+          particleFraction = Math.min(1.0, particleFraction + 0.1);
+          adaptCooldown = 2;
+        }
       }
 
       perfHost.__parallaxCanvasPerf = {
         fps: Number(currentFps.toFixed(1)),
         frameMs: Number(emaFrameMs.toFixed(1)),
         drawMs: Number(emaDrawMs.toFixed(1)),
-        particles: particles.length,
+        particles: particles.length, quality: particleFraction,
         webgl: useWebGL,
         firefox: isFirefox,
         scrolling: isScrollActive,
@@ -590,7 +652,7 @@ export function ParallaxMoleculeCanvas({
 
       if (CANVAS_PERF_DEBUG && perfOverlayRef.current) {
         perfOverlayRef.current.textContent =
-          `${useWebGL ? "webgl" : "2d"} ${currentFps.toFixed(0)} fps | ${emaDrawMs.toFixed(1)} ms draw | ${particles.length} p${isScrollActive ? " | scroll" : ""}`;
+          `${useWebGL ? "webgl" : "2d"} ${currentFps.toFixed(0)} fps | ${emaDrawMs.toFixed(1)} ms draw | q${(particleFraction * 100).toFixed(0)}% | ${particles.length} p${isScrollActive ? " | scroll" : ""}`;
       }
 
       animationRef.current = requestAnimationFrame(animate);

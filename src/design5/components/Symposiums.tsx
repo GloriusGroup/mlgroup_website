@@ -152,7 +152,7 @@ export function Symposiums() {
   const [modalSymposium, setModalSymposium] = useState<Symposium | null>(null);
 
   return (
-    <section className="section" id="symposiums" ref={ref}>
+    <section className="section" id="symposia" ref={ref}>
       <div className="reveal">
         <div className="section__label">EVENTS</div>
         <h2 className="section__heading">Symposium Series</h2>
