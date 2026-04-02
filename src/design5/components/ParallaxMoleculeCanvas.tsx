@@ -373,16 +373,6 @@ export function ParallaxMoleculeCanvas({
     reallocGrid();
     reallocConnGrid();
 
-    const toRgba = (alpha: number) => {
-      const clamped = Math.max(0, Math.min(1, alpha));
-      const key = Math.round(clamped * 1000);
-      const cached = colorCache.get(key);
-      if (cached) return cached;
-      const value = `rgba(${accentRgb}, ${(key / 1000).toFixed(3)})`;
-      colorCache.set(key, value);
-      return value;
-    };
-
     const initParticles = (w: number, h: number) => {
       const particles: Particle[] = [];
       const scale = Math.min(1, (w * h) / (1920 * 1080)) * densityScale;
