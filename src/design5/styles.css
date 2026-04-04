@@ -530,7 +530,7 @@ button:focus-visible {
   color: var(--text);
   margin-top: 1.25rem;
   line-height: 1.6;
-  white-space: nowrap;
+  white-space: normal;
   animation: fadeInUp 0.7s ease-out 0.2s both;
 }
 
