@@ -22,17 +22,12 @@
     }
   },
   {
-    "name": "Dr. Felix Katzenburg",
+    "name": "Latimah Bustillo Arrechea",
     "role": "Alumnus",
-    "image": "felix_katzenburg.png",
+    "image": "latimah_bustillo_arrechea.png",
     "email": "",
-    "description": "Former PhD student in the ML group. Current position: University of Toronto. Worked on pyGecko for calibration-free GC-MS/FID quantification and automated high-throughput reaction screening.",
-    "links": {
-      "github": "https://github.com/FelixKatz77",
-      "linkedin": "https://www.linkedin.com/in/felix-katzenburg-8900b9225/",
-      "orcid": "https://orcid.org/0000-0003-3053-4911",
-      "x": "https://x.com/FKatzenburg"
-    },
+    "description": "Former Visiting PhD Student in the group. Current position: University of Lisboa, Lisboa, Portugal.",
+    "links": {},
     "section": "alumni"
   },
   {
@@ -60,6 +55,17 @@
     }
   },
   {
+    "name": "Tobias Elsbecker",
+    "role": "Alumnus",
+    "image": "tobias_elsbecker.png",
+    "email": "",
+    "description": "Former data scientist in the ML group. Current position: CTO, Cheminnovation GmbH.",
+    "links": {
+      "linkedin": "https://www.linkedin.com/in/tobiaselsbecker"
+    },
+    "section": "alumni"
+  },
+  {
     "name": "Niklas Hölter",
     "role": "PhD Student",
     "image": "niklas_hoelter.png",
@@ -71,6 +77,32 @@
     }
   },
   {
+    "name": "Dr. Felix Katzenburg",
+    "role": "Alumnus",
+    "image": "felix_katzenburg.png",
+    "email": "",
+    "description": "Former PhD student in the ML group. Current position: University of Toronto. Worked on pyGecko for calibration-free GC-MS/FID quantification and automated high-throughput reaction screening.",
+    "links": {
+      "github": "https://github.com/FelixKatz77",
+      "linkedin": "https://www.linkedin.com/in/felix-katzenburg-8900b9225/",
+      "orcid": "https://orcid.org/0000-0003-3053-4911",
+      "x": "https://x.com/FKatzenburg"
+    },
+    "section": "alumni"
+  },
+  {
+    "name": "Dr. Marius Kühnemund",
+    "role": "Alumnus",
+    "image": "marius_kuehnemund.png",
+    "email": "",
+    "description": "Former data scientist in the ML group. Current position: Senior ML Engineer, syte GmbH.",
+    "links": {
+      "scholar": "https://scholar.google.de/citations?hl=de&user=g6f-fokAAAAJ",
+      "linkedin": "https://www.linkedin.com/in/marius-k%C3%BChnemund-1b677b225/"
+    },
+    "section": "alumni"
+  },
+  {
     "name": "Maik Niedziella",
     "role": "PhD Student",
     "image": "maik_niedziella.png",
@@ -79,6 +111,27 @@
     "links": {
       "linkedin": "https://www.linkedin.com/in/maik-niedziella-395623212/"
     }
+  },
+  {
+    "name": "Arie Jacco van Noordenne",
+    "role": "PhD Student",
+    "image": "ard_van_noordenne.png",
+    "email": "a.van.noordenne@uni-muenster.de",
+    "description": "Interested in improving the reliability and sustainability of chemistry through data-driven experiment design in combination with high-throughput experimentation platforms.",
+    "links": {
+      "linkedin": "https://www.linkedin.com/in/ard-van-noordenne-523bb6271/"
+    }
+  },
+  {
+    "name": "Philipp Pflüger",
+    "role": "Alumnus",
+    "image": "philipp_pflueger.png",
+    "email": "",
+    "description": "Former PhD student in the ML group. Current position: CEO, Cheminnovation GmbH.",
+    "links": {
+      "linkedin": "https://www.linkedin.com/in/philipp-m-pfl%C3%BCger-1067a41a6/"
+    },
+    "section": "alumni"
   },
   {
     "name": "Debanjan Rana",
@@ -92,6 +145,24 @@
     "section": "alumni"
   },
   {
+    "name": "Dr. Frederik Sandfort",
+    "role": "Alumnus",
+    "image": "frederik_sandfort.png",
+    "email": "",
+    "description": "Former PhD Student in the group. Current position: BASF SE, Ludwigshafen, Germany.",
+    "links": {},
+    "section": "alumni"
+  },
+  {
+    "name": "Dr. Felix Schäfer",
+    "role": "Alumnus",
+    "image": "felix_schaefer.png",
+    "email": "",
+    "description": "Former PhD Student in the group. Current position: Lonza AG.",
+    "links": {},
+    "section": "alumni"
+  },
+  {
     "name": "Leon Schlosser",
     "role": "PhD Student",
     "image": "leon_schlosser.png",
@@ -99,6 +170,18 @@
     "description": "Combining data-driven and experimental screening strategies for accelerated discovery in photocatalysis.",
     "links": {
       "orcid": "https://orcid.org/0009-0007-6764-6497"
+    }
+  },
+  {
+    "name": "Rubal Sharma",
+    "role": "PhD Student",
+    "image": "rubal_sharma.png",
+    "email": "rubal.sharma@uni-muenster.de",
+    "description": "PhD student in the Glorius group working on machine learning for organic chemistry.",
+    "links": {
+      "scholar": "https://scholar.google.de/citations?&user=IAarMl4AAAAJ&hl=en",
+      "linkedin": "https://www.linkedin.com/in/rubal-sharma-847483247/",
+      "orcid": "https://orcid.org/0009-0003-7827-882X"
     }
   },
   {
@@ -111,6 +194,15 @@
       "linkedin": "https://www.linkedin.com/in/jan-spies-b01395241/",
       "orcid": "https://orcid.org/0009-0005-9793-6319"
     }
+  },
+  {
+    "name": "Dr. Felix Strieth-Kalthoff",
+    "role": "Alumnus",
+    "image": "felix_strieth_kalthoff.png",
+    "email": "",
+    "description": "Former PhD Student in the group. Current position: Assistant Professor, University of Wuppertal, Faculty of Mathematics and Natural Sciences, Assistant Professorship for Digital Chemistry.",
+    "links": {},
+    "section": "alumni"
   },
   {
     "name": "Manh Hung Tran",
@@ -131,75 +223,5 @@
     "links": {
       "linkedin": "https://www.linkedin.com/in/nick-wierich/"
     }
-  },
-  {
-    "name": "Philipp Pflüger",
-    "role": "Alumnus",
-    "image": "philipp_pflueger.png",
-    "email": "",
-    "description": "Former PhD student in the ML group. Current position: CEO, Cheminnovation GmbH.",
-    "links": {
-      "linkedin": "https://www.linkedin.com/in/philipp-m-pfl%C3%BCger-1067a41a6/"
-    },
-    "section": "alumni"
-  },
-  {
-    "name": "Tobias Elsbecker",
-    "role": "Alumnus",
-    "image": "tobias_elsbecker.png",
-    "email": "",
-    "description": "Former data scientist in the ML group. Current position: CTO, Cheminnovation GmbH.",
-    "links": {
-      "linkedin": "https://www.linkedin.com/in/tobiaselsbecker"
-    },
-    "section": "alumni"
-  },
-  {
-    "name": "Dr. Marius Kühnemund",
-    "role": "Alumnus",
-    "image": "marius_kuehnemund.png",
-    "email": "",
-    "description": "Former data scientist in the ML group. Current position: Senior ML Engineer, syte GmbH.",
-    "links": {
-      "scholar": "https://scholar.google.de/citations?hl=de&user=g6f-fokAAAAJ",
-      "linkedin": "https://www.linkedin.com/in/marius-k%C3%BChnemund-1b677b225/"
-    },
-    "section": "alumni"
-  },
-  {
-    "name": "Latimah Bustillo Arrechea",
-    "role": "Alumnus",
-    "image": "latimah_bustillo_arrechea.png",
-    "email": "",
-    "description": "Former Visiting PhD Student in the group. Current position: University of Lisboa, Lisboa, Portugal.",
-    "links": {},
-    "section": "alumni"
-  },
-  {
-    "name": "Dr. Felix Strieth-Kalthoff",
-    "role": "Alumnus",
-    "image": "felix_strieth_kalthoff.png",
-    "email": "",
-    "description": "Former PhD Student in the group. Current position: Assistant Professor, University of Wuppertal, Faculty of Mathematics and Natural Sciences, Assistant Professorship for Digital Chemistry.",
-    "links": {},
-    "section": "alumni"
-  },
-  {
-    "name": "Dr. Frederik Sandfort",
-    "role": "Alumnus",
-    "image": "frederik_sandfort.png",
-    "email": "",
-    "description": "Former PhD Student in the group. Current position: BASF SE, Ludwigshafen, Germany.",
-    "links": {},
-    "section": "alumni"
-  },
-  {
-    "name": "Dr. Felix Schäfer",
-    "role": "Alumnus",
-    "image": "felix_schaefer.png",
-    "email": "",
-    "description": "Former PhD Student in the group. Current position: Lonza AG.",
-    "links": {},
-    "section": "alumni"
   }
 ]

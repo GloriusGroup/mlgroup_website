@@ -23,7 +23,12 @@
       "Bash(bunx playwright:*)",
       "Bash(bunx lighthouse:*)",
       "Bash(CHROME_PATH=/home/employee/ndobbers/.cache/ms-playwright/chromium-1208/chrome-linux64/chrome bunx lighthouse http://localhost:3000 --output=json --output=html --output-path=/tmp/lighthouse --chrome-flags=\"--headless --no-sandbox --disable-gpu\" --only-categories=performance,accessibility,best-practices,seo)",
-      "Bash(kill %1)"
+      "Bash(kill %1)",
+      "WebFetch(domain:www.thereidlab.com)",
+      "Bash(curl -sL -o ard.jpg \"https://static.wixstatic.com/media/ceb866_88e0e5171b7f42bca28bdf3d2b05746b~mv2.jpg/v1/crop/x_830,y_0,w_3525,h_3456/fill/w_410,h_402,al_c,q_80,usm_0.66_1.00_0.01,enc_avif,quality_auto/IMG_0551.jpg\")",
+      "Bash(curl -sL -o rubal.png \"https://www.uni-muenster.de/imperia/md/images/organisch_chemisches_institut2/glorius/arbeitsgruppe/fittosize_215_215_e8bff1bab77ecda71eecea03bb136631_rubal_sharma.png\")",
+      "Bash(ffmpeg -y -i /tmp/ard.jpg -c:v libwebp -quality 85 ard_van_noordenne.webp)",
+      "Bash(ffmpeg -y -i /tmp/rubal.png -c:v libwebp -quality 85 rubal_sharma.webp)"
     ]
   }
 }

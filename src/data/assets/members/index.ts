@@ -17,6 +17,8 @@ import latimah_bustillo_arrechea from "./latimah_bustillo_arrechea.webp";
 import felix_strieth_kalthoff from "./felix_strieth_kalthoff.webp";
 import frederik_sandfort from "./frederik_sandfort.webp";
 import felix_schaefer from "./felix_schaefer.webp";
+import ard_van_noordenne from "./ard_van_noordenne.webp";
+import rubal_sharma from "./rubal_sharma.webp";
 
 export const memberImages: Record<string, string> = {
   "frank_glorius.png": frank_glorius,
@@ -38,6 +40,8 @@ export const memberImages: Record<string, string> = {
   "felix_strieth_kalthoff.png": felix_strieth_kalthoff,
   "frederik_sandfort.png": frederik_sandfort,
   "felix_schaefer.png": felix_schaefer,
+  "ard_van_noordenne.png": ard_van_noordenne,
+  "rubal_sharma.png": rubal_sharma,
 };
 
 /** 3-letter shortcodes for the ?member= easter egg */
@@ -53,6 +57,8 @@ export const memberCodes: Record<string, string> = {
   JSP: jan_spies,
   MHT: manh_hung_tran,
   NRW: nick_wierich,
+  AVN: ard_van_noordenne,
+  RSH: rubal_sharma,
 };
 
 /** All member image URLs for the ALL mode */
@@ -68,4 +74,6 @@ export const allMemberUrls: string[] = [
   jan_spies,
   manh_hung_tran,
   nick_wierich,
+  ard_van_noordenne,
+  rubal_sharma,
 ];
