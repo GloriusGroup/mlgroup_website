@@ -69,11 +69,12 @@ const CANVAS_PERF_DEBUG =
 // ---------------------------------------------------------------------------
 function createGLRenderer(canvas: HTMLCanvasElement, accentRgb: string) {
   // Try multiple WebGL context types — Firefox may reject some options/contexts.
-  // desynchronized can cause failures on some drivers, so try without it too.
+  // NOTE: do NOT request `desynchronized` here. This canvas sits *behind* the
+  // scrolling page content; a desynchronized (low-latency) surface presents out
+  // of step with the page compositor and flickers/tears on load and while
+  // scrolling. Synchronized presentation keeps the background stable.
   const opts = { alpha: true, premultipliedAlpha: true, antialias: false, failIfMajorPerformanceCaveat: false };
   const gl = (
-    canvas.getContext("webgl2", { ...opts, desynchronized: true }) ??
-    canvas.getContext("webgl", { ...opts, desynchronized: true }) ??
     canvas.getContext("webgl2", opts) ??
     canvas.getContext("webgl", opts)
   ) as WebGLRenderingContext | null;
@@ -276,7 +277,6 @@ export function ParallaxMoleculeCanvas({
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const particlesRef = useRef<Particle[]>([]);
   const animationRef = useRef<number>(0);
-  const scrollRef = useRef(0);
   const mouseRef = useRef({ x: -9999, y: -9999 });
   const timeRef = useRef(0);
   const memberImgRef = useRef<HTMLImageElement | null>(null);
@@ -313,14 +313,15 @@ export function ParallaxMoleculeCanvas({
     // Member mode needs Canvas 2D for image drawing (WebGL has no texture support here)
     const glRenderer = MEMBER_MODE ? null : createGLRenderer(canvas, accentRgb);
     const useWebGL = !!glRenderer;
-    const ctx = useWebGL ? null : canvas.getContext("2d", { desynchronized: true });
+    // No `desynchronized` — see createGLRenderer note; it flickers behind scrolling content.
+    const ctx = useWebGL ? null : canvas.getContext("2d");
     if (!useWebGL && !ctx) return;
     console.log(`[ParallaxCanvas] Renderer: ${useWebGL ? "WebGL" : "Canvas 2D"}, Firefox: ${isFirefox}, MemberMode: ${MEMBER_MODE}`);
 
     // WebGL: GPU handles it → full quality. Canvas 2D fallback: CPU-bound → reduce work.
     const densityScale = useWebGL ? 1 : (MEMBER_MODE ? 0.6 : 0.5);
     const baseRenderScale = useWebGL ? 0.75 : (MEMBER_MODE ? 1.0 : 0.5);
-    let renderScale = baseRenderScale;
+    const renderScale = baseRenderScale;
 
     const scrollOffsets = new Float32Array(LAYERS.length);
     const colorCache = new Map<number, string>();
@@ -351,9 +352,7 @@ export function ParallaxMoleculeCanvas({
     let emaFrameMs = 16.7;
     let emaDrawMs = 8;
     let scrollActiveUntil = 0;
-    // Adaptive quality — fraction of particles to render (1.0 = all, 0.3 = minimum)
-    let particleFraction = 1.0;
-    let adaptCooldown = 0;
+    const particleFraction = 1.0;
     let viewportWidth = window.innerWidth;
     let viewportHeight = window.innerHeight;
     let layerBuffers: LayerFrameBuffers[] = [];
@@ -418,8 +417,19 @@ export function ParallaxMoleculeCanvas({
     };
 
     const resize = () => {
-      viewportWidth = window.innerWidth;
-      viewportHeight = window.innerHeight;
+      const newW = window.innerWidth;
+      const newH = window.innerHeight;
+      // Mobile browsers grow/shrink innerHeight as the URL bar hides/shows while
+      // scrolling. Re-sizing the draw buffer clears the canvas, so ignore all
+      // height-only changes after setup and only react to width changes/rotation.
+      if (
+        particlesRef.current.length > 0 &&
+        newW === viewportWidth
+      ) {
+        return;
+      }
+      viewportWidth = newW;
+      viewportHeight = newH;
       reallocGrid();
       reallocConnGrid();
       if (useWebGL) {
@@ -441,10 +451,8 @@ export function ParallaxMoleculeCanvas({
     window.addEventListener("resize", resize);
 
     const handleScroll = () => {
-      const nextY = window.scrollY;
       const now = performance.now();
       scrollActiveUntil = now + 140;
-      scrollRef.current = nextY;
     };
     window.addEventListener("scroll", handleScroll, { passive: true });
 
@@ -469,14 +477,13 @@ export function ParallaxMoleculeCanvas({
       const h = viewportHeight;
       const particles = particlesRef.current;
       if (layerGroups[0]!.length === 0) rebuildLayerGroups();
-      const scrollY = scrollRef.current;
       const mouse = mouseRef.current;
       timeRef.current += 0.006 * frameScale;
       const time = timeRef.current;
 
       const buf = 80;
       const wrapH = h + buf * 2;
-      for (let i = 0; i < LAYERS.length; i++) scrollOffsets[i] = -scrollY * LAYERS[i]!.scrollSpeed;
+      for (let i = 0; i < LAYERS.length; i++) scrollOffsets[i] = 0;
 
       const renderedY = (p: Particle) => {
         const raw = p.y + scrollOffsets[p.layer]!;
@@ -564,7 +571,7 @@ export function ParallaxMoleculeCanvas({
             p.vy += (dy / dist) * force * 0.2 * frameScale;
           }
         }
-        if (edgeZone > 0 && p.renderY - scrollY > -50 && p.renderY - scrollY < h) {
+        if (edgeZone > 0 && p.renderY > -50 && p.renderY < h) {
           if (p.x < edgeZone) { const t = 1 - p.x / edgeZone; p.vx += t * t * 0.15 * frameScale; }
           else if (p.x > w - edgeZone) { const t = 1 - (w - p.x) / edgeZone; p.vx -= t * t * 0.15 * frameScale; }
         }
@@ -714,38 +721,13 @@ export function ParallaxMoleculeCanvas({
         ctx!.globalAlpha = 1;
       }
 
-      // --- Stats & adaptive quality ---
+      // --- Stats ---
       const drawMs = performance.now() - drawStart;
       emaFrameMs = emaFrameMs * 0.92 + deltaMs * 0.08;
       emaDrawMs = emaDrawMs * 0.92 + drawMs * 0.08;
       if (timestamp - fpsWindowStart >= 1000) {
         currentFps = (fpsFrameCount * 1000) / (timestamp - fpsWindowStart);
         fpsFrameCount = 0; fpsWindowStart = timestamp;
-
-        // Adapt particle count + render scale based on sustained FPS
-        if (adaptCooldown > 0) { adaptCooldown--; }
-        else if (currentFps < 28 && particleFraction > 0.3) {
-          particleFraction = Math.max(0.3, particleFraction - 0.15);
-          renderScale = Math.max(baseRenderScale * 0.4, renderScale - 0.1);
-          adaptCooldown = 3;
-          // Apply new scale immediately
-          if (useWebGL) glRenderer!.resize(viewportWidth, viewportHeight, renderScale);
-          else {
-            canvas.width = Math.max(1, Math.floor(viewportWidth * renderScale));
-            canvas.height = Math.max(1, Math.floor(viewportHeight * renderScale));
-            ctx!.setTransform(renderScale, 0, 0, renderScale, 0, 0);
-          }
-        } else if (currentFps > 50 && particleFraction < 1.0) {
-          particleFraction = Math.min(1.0, particleFraction + 0.1);
-          renderScale = Math.min(baseRenderScale, renderScale + 0.05);
-          adaptCooldown = 2;
-          if (useWebGL) glRenderer!.resize(viewportWidth, viewportHeight, renderScale);
-          else {
-            canvas.width = Math.max(1, Math.floor(viewportWidth * renderScale));
-            canvas.height = Math.max(1, Math.floor(viewportHeight * renderScale));
-            ctx!.setTransform(renderScale, 0, 0, renderScale, 0, 0);
-          }
-        }
       }
 
       perfHost.__parallaxCanvasPerf = {

@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback } from "react";
+import React, { useCallback, useEffect, useLayoutEffect, useState } from "react";
 import { createRoot } from "react-dom/client";
 import posthog from "posthog-js";
 import { PostHogProvider } from "posthog-js/react";
@@ -23,26 +23,24 @@ const PARALLAX_MODE = true; //new URLSearchParams(window.location.search).get("p
 
 // Background mode: "grid" (default), "dots", "hexagons", "circuit-board", "none"
 const BG_MODE: "grid" | "dots" | "hexagons" | "circuit-board" | "none" = "circuit-board";
-
-// Set after successful posthog.init()
-let posthogInitialized = false;
+const DEFAULT_ACCENT_INDEX = 3; // Pale
 
 // ---------------------------------------------------------------------------
 // App
 // ---------------------------------------------------------------------------
 function App() {
   const [isDark, setIsDark] = useState(true);
-  const [accentIndex, setAccentIndex] = useState(3); // Pale
+  const [accentIndex, setAccentIndex] = useState(DEFAULT_ACCENT_INDEX);
+  const [analyticsEnabled, setAnalyticsEnabled] = useState(false);
   const devSwitchEnabled = false;
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     const el = document.documentElement;
-    // Apply background mode class
     el.classList.remove("bg-grid", "bg-circuit", "bg-dots", "bg-hexagons", "bg-circuit-board", "bg-none");
     el.classList.add(`bg-${BG_MODE}`);
   }, []);
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (isDark) {
       document.documentElement.classList.remove("light-mode");
     } else {
@@ -50,17 +48,50 @@ function App() {
     }
   }, [isDark]);
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     const el = document.documentElement;
-    // Remove all accent classes
     for (const preset of ACCENT_PRESETS) {
       if (preset.className) el.classList.remove(preset.className);
     }
-    // Apply current accent class (index 0 = default, no class needed)
     const current = ACCENT_PRESETS[accentIndex];
     if (current?.className) el.classList.add(current.className);
     localStorage.setItem("accent_index", String(accentIndex));
   }, [accentIndex]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    fetch("/api/posthog-config")
+      .then((res) => res.json())
+      .then(({ key, host, enabled }: { key: string; host: string; enabled: boolean }) => {
+        if (!enabled || !key || cancelled) return;
+
+        posthog.init(key, {
+          api_host: host,
+          // --- GDPR compliance (Uni Münster Datenschutz) ---
+          opt_out_capturing_by_default: true,  // No data sent until explicit consent
+          respect_dnt: true,                   // Honor browser Do Not Track
+          ip: false,                           // Never send full IP (policy: only 2 bytes)
+          capture_pageview: true,              // Track accessed pages
+          capture_pageleave: true,             // Track time spent on pages
+          autocapture: false,                  // Only capture page views, not clicks/inputs
+          disable_session_recording: true,     // No session replays
+          enable_heatmaps: false,              // No heatmaps
+          persistence: "localStorage+cookie",  // Opt-out cookie survives like Matomo's
+        });
+
+        const consent = localStorage.getItem("analytics_consent");
+        if (consent === "accepted") posthog.opt_in_capturing();
+        setAnalyticsEnabled(true);
+      })
+      .catch(() => {
+        if (!cancelled) setAnalyticsEnabled(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const toggleTheme = useCallback(() => setIsDark((prev) => !prev), []);
   const cycleAccent = useCallback(
@@ -109,13 +140,13 @@ function App() {
         </main>
         <Footer />
       </div>
-      <CookieBanner analyticsEnabled={posthogInitialized} />
+      <CookieBanner analyticsEnabled={analyticsEnabled} />
     </>
   );
 }
 
 // ---------------------------------------------------------------------------
-// Mount — fetch PostHog config from server, init if enabled, then render
+// Mount
 // ---------------------------------------------------------------------------
 function mount() {
   const root = createRoot(document.getElementById("root")!);
@@ -126,27 +157,4 @@ function mount() {
   );
 }
 
-fetch("/api/posthog-config")
-  .then((res) => res.json())
-  .then(({ key, host, enabled }: { key: string; host: string; enabled: boolean }) => {
-    if (enabled && key) {
-      posthog.init(key, {
-        api_host: host,
-        // --- GDPR compliance (Uni Münster Datenschutz) ---
-        opt_out_capturing_by_default: true,  // No data sent until explicit consent
-        respect_dnt: true,                   // Honor browser Do Not Track
-        ip: false,                           // Never send full IP (policy: only 2 bytes)
-        capture_pageview: true,              // Track accessed pages
-        capture_pageleave: true,             // Track time spent on pages
-        autocapture: false,                  // Only capture page views, not clicks/inputs
-        disable_session_recording: true,     // No session replays
-        enable_heatmaps: false,              // No heatmaps
-        persistence: "localStorage+cookie",  // Opt-out cookie survives like Matomo's
-      });
-      posthogInitialized = true;
-      const consent = localStorage.getItem("analytics_consent");
-      if (consent === "accepted") posthog.opt_in_capturing();
-    }
-    mount();
-  })
-  .catch(() => mount());
+mount();

@@ -1,7 +1,7 @@
 import React from "react";
 import { useScrollReveal } from "../shared/hooks";
 import { EmailIcon, linkIconMap } from "../shared/icons";
-import { getInitials, getAvatarGradient } from "../shared/utils";
+import { getInitials, getAvatarGradient, memberSlug } from "../shared/utils";
 import type { Member } from "../shared/types";
 import membersData from "../../data/members.json";
 import { memberImages } from "../../data/assets/members";
@@ -19,6 +19,7 @@ function TeamCard({ member, index, useAltTheme }: { member: Member; index: numbe
 
   return (
     <div
+      id={memberSlug(member.name)}
       className={`team-card reveal reveal-delay-${Math.min(index + 1, 12)}`}
     >
       <div
@@ -35,7 +36,32 @@ function TeamCard({ member, index, useAltTheme }: { member: Member; index: numbe
       </div>
       <h3 className="team-card__name">{member.name}</h3>
       <div className="team-card__role">{member.role}</div>
-      <p className="team-card__desc">{member.description}</p>
+      {member.description ? (
+        <p className="team-card__desc">{member.description}</p>
+      ) : null}
+      {member.thesis ? (
+        <div className="team-card__thesis">
+          <span className="team-card__thesis-label">Thesis</span>
+          <span className="team-card__thesis-title">{member.thesis}</span>
+        </div>
+      ) : null}
+      {member.supervisors && member.supervisors.length > 0 ? (
+        <div className="team-card__supervisor">
+          <span className="team-card__supervisor-label">
+            {member.supervisors.length > 1 ? "Supervisors" : "Supervisor"}
+          </span>
+          <span className="team-card__supervisor-name">
+            {member.supervisors.map((sup, i) => (
+              <React.Fragment key={sup}>
+                {i > 0 ? " & " : null}
+                <a className="team-card__supervisor-link" href={`#${memberSlug(sup)}`}>
+                  {sup}
+                </a>
+              </React.Fragment>
+            ))}
+          </span>
+        </div>
+      ) : null}
       <div className="team-card__links">
         {member.email && (
           <a
@@ -70,7 +96,10 @@ function TeamCard({ member, index, useAltTheme }: { member: Member; index: numbe
 export function Team({ useAltTheme }: { useAltTheme: boolean }) {
   const ref = useScrollReveal();
   const members = membersData as Member[];
-  const currentMembers = members.filter((member) => member.section !== "alumni");
+  const currentMembers = members.filter(
+    (member) => member.section !== "alumni" && member.section !== "students",
+  );
+  const students = members.filter((member) => member.section === "students");
   const alumni = members.filter((member) => member.section === "alumni");
 
   return (
@@ -84,6 +113,22 @@ export function Team({ useAltTheme }: { useAltTheme: boolean }) {
           <TeamCard key={m.name} member={m} index={i} useAltTheme={useAltTheme} />
         ))}
       </div>
+      {students.length > 0 ? (
+        <div className="team-subsection reveal reveal-delay-2">
+          <div className="section__label">STUDENTS</div>
+          <h3 className="team-subsection__heading">Bachelor &amp; Master Students</h3>
+          <div className="team-grid team-grid--students">
+            {students.map((member, index) => (
+              <TeamCard
+                key={member.name}
+                member={member}
+                index={index}
+                useAltTheme={useAltTheme}
+              />
+            ))}
+          </div>
+        </div>
+      ) : null}
       {alumni.length > 0 ? (
         <div className="team-subsection reveal reveal-delay-2">
           <div className="section__label">ALUMNI</div>

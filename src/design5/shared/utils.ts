@@ -42,6 +42,19 @@ export function getInitials(name: string): string {
   return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
 }
 
+/** URL-safe slug for anchoring team cards, e.g. "Ard van Noordenne" -> "member-ard-van-noordenne" */
+export function memberSlug(name: string): string {
+  return (
+    "member-" +
+    name
+      .toLowerCase()
+      .normalize("NFD")
+      .replace(/[̀-ͯ]/g, "")
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/^-+|-+$/g, "")
+  );
+}
+
 export function getAvatarGradient(name: string, useAlt = false): string {
   const gradients = useAlt ? ALT_AVATAR_GRADIENTS : AVATAR_GRADIENTS;
   return gradients[hashCode(name) % gradients.length];

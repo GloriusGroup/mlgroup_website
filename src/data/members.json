@@ -223,5 +223,18 @@
     "links": {
       "linkedin": "https://www.linkedin.com/in/nick-wierich/"
     }
+  },
+  {
+    "name": "Lennox Brand",
+    "role": "Bachelor's Student",
+    "image": "lennox_brand.png",
+    "email": "lbrand3@uni-muenster.de",
+    "description": "",
+    "supervisors": ["Maik Niedziella", "Ard van Noordenne"],
+    "thesis": "Data-Driven Prediction of Regioisomeric and Diastereomeric Outcomes in Photochemical [4+2]-Cycloadditions",
+    "links": {
+      "linkedin": "https://www.linkedin.com/in/lennox-brand/"
+    },
+    "section": "students"
   }
 ]

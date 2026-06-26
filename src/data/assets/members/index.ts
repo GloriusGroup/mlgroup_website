@@ -19,6 +19,7 @@ import frederik_sandfort from "./frederik_sandfort.webp";
 import felix_schaefer from "./felix_schaefer.webp";
 import ard_van_noordenne from "./ard_van_noordenne.webp";
 import rubal_sharma from "./rubal_sharma.webp";
+import lennox_brand from "./lennox_brand.webp";
 
 export const memberImages: Record<string, string> = {
   "frank_glorius.png": frank_glorius,
@@ -42,6 +43,7 @@ export const memberImages: Record<string, string> = {
   "felix_schaefer.png": felix_schaefer,
   "ard_van_noordenne.png": ard_van_noordenne,
   "rubal_sharma.png": rubal_sharma,
+  "lennox_brand.png": lennox_brand,
 };
 
 /** 3-letter shortcodes for the ?member= easter egg */

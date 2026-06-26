@@ -5,7 +5,11 @@ export interface Member {
   email: string;
   description: string;
   links: Record<string, string>;
-  section?: "current" | "alumni";
+  section?: "current" | "alumni" | "students";
+  /** For thesis students: supervisor name(s) */
+  supervisors?: string[];
+  /** For thesis students: Bachelor/Master thesis title */
+  thesis?: string;
 }
 
 export interface Project {
