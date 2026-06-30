@@ -236,5 +236,16 @@
       "linkedin": "https://www.linkedin.com/in/lennox-brand/"
     },
     "section": "students"
+  },
+  {
+    "name": "Kea Coersmeier",
+    "role": "Bachelor's Student",
+    "image": "kea_coersmeier.png",
+    "email": "kcoersme@uni-muenster.de",
+    "description": "",
+    "supervisors": ["Florian Boser", "Manh Hung Tran"],
+    "thesis": "Acceleration of a Molecular Fingerprint Algorithm and Data-driven Reaction Optimization",
+    "links": {},
+    "section": "students"
   }
 ]
