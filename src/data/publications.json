@@ -1,5 +1,45 @@
 [
   {
+    "title": "PRISM, a Bidirectional NMR Foundation Model: From Peak List to Structure and Back",
+    "authors": ["A. Hoque", "F. Glorius"],
+    "journal": "Angew. Chem. Int. Ed.",
+    "year": 2026,
+    "volume": "",
+    "pages": "",
+    "doi": "https://doi.org/10.1002/anie.7185622",
+    "tags": ["NMR", "structure elucidation", "foundation model"]
+  },
+  {
+    "title": "Chemistry-Informed Multimodal Model for Structure Elucidation in Automated Reaction Discovery",
+    "authors": ["M. G. Niedziella", "P. M. Pflüger", "A. Hoque", "F. Glorius"],
+    "journal": "ChemRxiv",
+    "year": 2026,
+    "volume": "",
+    "pages": "",
+    "doi": "https://doi.org/10.26434/chemrxiv.15008991/v1",
+    "tags": ["GC-MS", "structure elucidation", "reaction discovery"]
+  },
+  {
+    "title": "Machine Learning for Synthetic Organic Chemistry: Methods, Applications, and Best Practices",
+    "authors": ["N. Hölter", "F. Katzenburg", "F. Boser", "F. Glorius"],
+    "journal": "Angew. Chem. Novit.",
+    "year": 2026,
+    "volume": "2",
+    "pages": "e70032",
+    "doi": "https://doi.org/10.1002/anov.70032",
+    "tags": ["machine learning", "synthetic chemistry", "review"]
+  },
+  {
+    "title": "Reaction: The Art of Autonomous Chemistry",
+    "authors": ["F. Boser", "F. Glorius"],
+    "journal": "Chem",
+    "year": 2026,
+    "volume": "12",
+    "pages": "103138",
+    "doi": "https://doi.org/10.1016/j.chempr.2026.103138",
+    "tags": ["autonomous discovery", "perspective"]
+  },
+  {
     "title": "Yield Prediction of Organic Reactions in Biased Data Sets via Positive-Unlabeled Learning",
     "authors": ["F. Boser", "J. C. Spies", "F. Glorius"],
     "journal": "J. Am. Chem. Soc.",

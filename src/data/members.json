@@ -22,6 +22,18 @@
     }
   },
   {
+    "name": "Dr. Dawson Konowalchuk",
+    "role": "Postdoctoral Researcher",
+    "image": "dawson_konowalchuk.png",
+    "email": "konowalc@uni-muenster.de",
+    "description": "PhD at the University of Alberta with Prof. Dennis G. Hall on selective cross-coupling reactions of symmetrical dihaloalkenes; industrial research experience at Xenon Pharmaceuticals.",
+    "links": {
+      "scholar": "https://scholar.google.de/citations?&user=VxfnF6sAAAAJ&hl",
+      "linkedin": "https://www.linkedin.com/in/dawson-konowalchuk-a63b23126/",
+      "orcid": "https://orcid.org/0000-0002-7273-2302"
+    }
+  },
+  {
     "name": "Latimah Bustillo Arrechea",
     "role": "Alumnus",
     "image": "latimah_bustillo_arrechea.png",
@@ -134,6 +146,17 @@
     "section": "alumni"
   },
   {
+    "name": "Luka Praprotnik Čurič",
+    "role": "PhD Student",
+    "image": "luka_praprotnik_curic.png",
+    "email": "luka.praprotnik@uni-muenster.de",
+    "description": "Doctoral candidate in the Marie Skłodowska-Curie Doctoral Network LowDataML. M.Sc. in Chemoinformatics (Ljubljana/Strasbourg) with a master thesis in reaction informatics at RIKEN AIP, Tokyo.",
+    "links": {
+      "github": "https://github.com/lukapraprotnik",
+      "linkedin": "https://www.linkedin.com/in/luka-praprotnik-curic-62a23626b/"
+    }
+  },
+  {
     "name": "Debanjan Rana",
     "role": "Alumnus",
     "image": "debanjan_rana.png",
@@ -163,14 +186,16 @@
     "section": "alumni"
   },
   {
-    "name": "Leon Schlosser",
-    "role": "PhD Student",
+    "name": "Dr. Leon Schlosser",
+    "role": "Alumnus",
     "image": "leon_schlosser.png",
-    "email": "leon.schlosser@uni-muenster.de",
-    "description": "Combining data-driven and experimental screening strategies for accelerated discovery in photocatalysis.",
+    "email": "",
+    "description": "Former PhD Student in the group. Current position: NXT Spectra (ChemInnovation GmbH), Cologne, Germany. Worked on combining data-driven and experimental screening strategies for accelerated discovery in photocatalysis.",
     "links": {
+      "linkedin": "https://www.linkedin.com/in/leon-schlosser-8360b6391/",
       "orcid": "https://orcid.org/0009-0007-6764-6497"
-    }
+    },
+    "section": "alumni"
   },
   {
     "name": "Rubal Sharma",
@@ -225,27 +250,37 @@
     }
   },
   {
-    "name": "Lennox Brand",
-    "role": "Bachelor's Student",
-    "image": "lennox_brand.png",
-    "email": "lbrand3@uni-muenster.de",
+    "name": "Janosch Knüppe",
+    "role": "Master's Student",
+    "image": "janosch_knueppe.png",
+    "email": "",
     "description": "",
+    "supervisors": ["Manh Hung Tran", "Florian Boser"],
+    "links": {},
+    "section": "students"
+  },
+  {
+    "name": "Lennox Brand",
+    "role": "Alumnus",
+    "image": "lennox_brand.png",
+    "email": "",
+    "description": "Former Bachelor's Student in the group.",
     "supervisors": ["Maik Niedziella", "Ard van Noordenne"],
     "thesis": "Data-Driven Prediction of Regioisomeric and Diastereomeric Outcomes in Photochemical [4+2]-Cycloadditions",
     "links": {
       "linkedin": "https://www.linkedin.com/in/lennox-brand/"
     },
-    "section": "students"
+    "section": "alumni"
   },
   {
     "name": "Kea Coersmeier",
-    "role": "Bachelor's Student",
+    "role": "Alumnus",
     "image": "kea_coersmeier.png",
-    "email": "kcoersme@uni-muenster.de",
-    "description": "",
+    "email": "",
+    "description": "Former Bachelor's Student in the group.",
     "supervisors": ["Florian Boser", "Manh Hung Tran"],
     "thesis": "Acceleration of a Molecular Fingerprint Algorithm and Data-driven Reaction Optimization",
     "links": {},
-    "section": "students"
+    "section": "alumni"
   }
 ]

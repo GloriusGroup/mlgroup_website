@@ -21,6 +21,9 @@ import ard_van_noordenne from "./ard_van_noordenne.webp";
 import rubal_sharma from "./rubal_sharma.webp";
 import lennox_brand from "./lennox_brand.webp";
 import kea_coersmeier from "./kea_coersmeier.webp";
+import dawson_konowalchuk from "./dawson_konowalchuk.webp";
+import luka_praprotnik_curic from "./luka_praprotnik_curic.webp";
+import janosch_knueppe from "./janosch_knueppe.webp";
 
 export const memberImages: Record<string, string> = {
   "frank_glorius.png": frank_glorius,
@@ -46,6 +49,9 @@ export const memberImages: Record<string, string> = {
   "rubal_sharma.png": rubal_sharma,
   "lennox_brand.png": lennox_brand,
   "kea_coersmeier.png": kea_coersmeier,
+  "dawson_konowalchuk.png": dawson_konowalchuk,
+  "luka_praprotnik_curic.png": luka_praprotnik_curic,
+  "janosch_knueppe.png": janosch_knueppe,
 };
 
 /** 3-letter shortcodes for the ?member= easter egg */
@@ -63,6 +69,9 @@ export const memberCodes: Record<string, string> = {
   NRW: nick_wierich,
   AVN: ard_van_noordenne,
   RSH: rubal_sharma,
+  DKO: dawson_konowalchuk,
+  LPC: luka_praprotnik_curic,
+  SCHNOSCH: janosch_knueppe,
 };
 
 /** All member image URLs for the ALL mode */
@@ -80,4 +89,6 @@ export const allMemberUrls: string[] = [
   nick_wierich,
   ard_van_noordenne,
   rubal_sharma,
+  dawson_konowalchuk,
+  luka_praprotnik_curic,
 ];
