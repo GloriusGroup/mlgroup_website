@@ -135,43 +135,62 @@ function createGLRenderer(canvas: HTMLCanvasElement, accentRgb: string) {
   const pUColor = gl.getUniformLocation(pp, "u_color");
 
   // --- Line program (connections) ---
+  // Lines are drawn as thin quads with a soft edge (a_edge runs -1..1 across the
+  // quad) so they stay smooth at full device resolution; GL_LINES are 1 device
+  // pixel wide and aliased.
   const lineProg = link(`
     attribute vec2 a_pos;
     attribute float a_alpha;
+    attribute float a_edge;
     uniform vec2 u_res;
     varying float v_alpha;
+    varying float v_edge;
     void main() {
       vec2 c = (a_pos / u_res) * 2.0 - 1.0;
       c.y = -c.y;
       gl_Position = vec4(c, 0.0, 1.0);
       v_alpha = a_alpha;
+      v_edge = a_edge;
     }`,`
     precision mediump float;
     uniform vec3 u_color;
+    uniform float u_inner;
     varying float v_alpha;
+    varying float v_edge;
     void main() {
-      gl_FragColor = vec4(u_color * v_alpha, v_alpha);
+      float a = v_alpha * (1.0 - smoothstep(u_inner, 1.0, abs(v_edge)));
+      gl_FragColor = vec4(u_color * a, a);
     }`);
   const lp = lineProg.prog;
   const lAPos = gl.getAttribLocation(lp, "a_pos");
   const lAAlpha = gl.getAttribLocation(lp, "a_alpha");
+  const lAEdge = gl.getAttribLocation(lp, "a_edge");
   const lURes = gl.getUniformLocation(lp, "u_res");
   const lUColor = gl.getUniformLocation(lp, "u_color");
+  const lUInner = gl.getUniformLocation(lp, "u_inner");
 
   const posBuf = gl.createBuffer()!;
   const sizeBuf = gl.createBuffer()!;
   const alphaBuf = gl.createBuffer()!;
   const linePosBuf = gl.createBuffer()!;
   const lineAlphaBuf = gl.createBuffer()!;
+  const lineEdgeBuf = gl.createBuffer()!;
 
   const MAX = 300;
   const posArr = new Float32Array(MAX * 2);
   const sizeArr = new Float32Array(MAX);
   const alphaArr = new Float32Array(MAX);
-  // Lines: each segment = 2 vertices, preallocate for up to 2000 segments
+  // Lines: each segment = 2 triangles = 6 vertices, preallocate for up to 2000 segments
   const MAX_LINES = 2000;
-  const linePosArr = new Float32Array(MAX_LINES * 4); // 2 verts × 2 coords
-  const lineAlphaArr = new Float32Array(MAX_LINES * 2); // 2 verts × 1 alpha
+  const linePosArr = new Float32Array(MAX_LINES * 12); // 6 verts × 2 coords
+  const lineAlphaArr = new Float32Array(MAX_LINES * 6); // 6 verts × 1 alpha
+  // Edge coordinate per vertex never changes: A+, A-, B+ / B+, A-, B-
+  const lineEdgeArr = new Float32Array(MAX_LINES * 6);
+  for (let i = 0; i < MAX_LINES; i++) lineEdgeArr.set([1, -1, 1, 1, -1, -1], i * 6);
+  gl.bindBuffer(gl.ARRAY_BUFFER, lineEdgeBuf);
+  gl.bufferData(gl.ARRAY_BUFFER, lineEdgeArr, gl.STATIC_DRAW);
+  // Same visual weight as the old 1-canvas-pixel line at 0.75 render scale (1.33 CSS px)
+  const LINE_WEIGHT = 1 / 0.75;
 
   gl.enable(gl.BLEND);
   gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
@@ -203,30 +222,50 @@ function createGLRenderer(canvas: HTMLCanvasElement, accentRgb: string) {
       // --- Draw lines first (behind particles) ---
       if (lineCount > 0) {
         const lc = Math.min(lineCount, MAX_LINES);
+        // Soft edge = 1 device pixel each side; the solid core makes up the rest of
+        // LINE_WEIGHT so total brightness matches at any pixel ratio.
+        const feather = 1 / scale;
+        const core = Math.max(0, LINE_WEIGHT - feather);
+        const half = core * 0.5 + feather;
         for (let i = 0; i < lc; i++) {
           const off = i * 5;
-          linePosArr[i * 4] = lineData[off]!; linePosArr[i * 4 + 1] = lineData[off + 1]!;
-          linePosArr[i * 4 + 2] = lineData[off + 2]!; linePosArr[i * 4 + 3] = lineData[off + 3]!;
-          lineAlphaArr[i * 2] = lineData[off + 4]!; lineAlphaArr[i * 2 + 1] = lineData[off + 4]!;
+          const ax = lineData[off]!, ay = lineData[off + 1]!;
+          const bx = lineData[off + 2]!, by = lineData[off + 3]!;
+          const len = Math.hypot(bx - ax, by - ay);
+          const nx = len > 1e-3 ? (-(by - ay) / len) * half : 0;
+          const ny = len > 1e-3 ? ((bx - ax) / len) * half : 0;
+          const v = i * 12;
+          linePosArr[v] = ax + nx; linePosArr[v + 1] = ay + ny;
+          linePosArr[v + 2] = ax - nx; linePosArr[v + 3] = ay - ny;
+          linePosArr[v + 4] = bx + nx; linePosArr[v + 5] = by + ny;
+          linePosArr[v + 6] = bx + nx; linePosArr[v + 7] = by + ny;
+          linePosArr[v + 8] = ax - nx; linePosArr[v + 9] = ay - ny;
+          linePosArr[v + 10] = bx - nx; linePosArr[v + 11] = by - ny;
+          lineAlphaArr.fill(lineData[off + 4]!, i * 6, i * 6 + 6);
         }
         gl!.useProgram(lp);
         gl!.uniform2f(lURes, w, h);
         gl!.uniform3f(lUColor, rgb[0]!, rgb[1]!, rgb[2]!);
+        gl!.uniform1f(lUInner, (core * 0.5) / half);
 
         gl!.bindBuffer(gl!.ARRAY_BUFFER, linePosBuf);
-        gl!.bufferData(gl!.ARRAY_BUFFER, linePosArr.subarray(0, lc * 4), gl!.DYNAMIC_DRAW);
+        gl!.bufferData(gl!.ARRAY_BUFFER, linePosArr.subarray(0, lc * 12), gl!.DYNAMIC_DRAW);
         gl!.enableVertexAttribArray(lAPos);
         gl!.vertexAttribPointer(lAPos, 2, gl!.FLOAT, false, 0, 0);
 
         gl!.bindBuffer(gl!.ARRAY_BUFFER, lineAlphaBuf);
-        gl!.bufferData(gl!.ARRAY_BUFFER, lineAlphaArr.subarray(0, lc * 2), gl!.DYNAMIC_DRAW);
+        gl!.bufferData(gl!.ARRAY_BUFFER, lineAlphaArr.subarray(0, lc * 6), gl!.DYNAMIC_DRAW);
         gl!.enableVertexAttribArray(lAAlpha);
         gl!.vertexAttribPointer(lAAlpha, 1, gl!.FLOAT, false, 0, 0);
 
-        gl!.lineWidth(1);
-        gl!.drawArrays(gl!.LINES, 0, lc * 2);
+        gl!.bindBuffer(gl!.ARRAY_BUFFER, lineEdgeBuf);
+        gl!.enableVertexAttribArray(lAEdge);
+        gl!.vertexAttribPointer(lAEdge, 1, gl!.FLOAT, false, 0, 0);
+
+        gl!.drawArrays(gl!.TRIANGLES, 0, lc * 6);
         gl!.disableVertexAttribArray(lAPos);
         gl!.disableVertexAttribArray(lAAlpha);
+        gl!.disableVertexAttribArray(lAEdge);
       }
 
       // --- Draw particles on top ---
@@ -262,7 +301,7 @@ function createGLRenderer(canvas: HTMLCanvasElement, accentRgb: string) {
       gl!.deleteProgram(pp); gl!.deleteShader(pointProg.vs); gl!.deleteShader(pointProg.fs);
       gl!.deleteProgram(lp); gl!.deleteShader(lineProg.vs); gl!.deleteShader(lineProg.fs);
       gl!.deleteBuffer(posBuf); gl!.deleteBuffer(sizeBuf); gl!.deleteBuffer(alphaBuf);
-      gl!.deleteBuffer(linePosBuf); gl!.deleteBuffer(lineAlphaBuf);
+      gl!.deleteBuffer(linePosBuf); gl!.deleteBuffer(lineAlphaBuf); gl!.deleteBuffer(lineEdgeBuf);
     },
   };
 }
@@ -320,7 +359,9 @@ export function ParallaxMoleculeCanvas({
 
     // WebGL: GPU handles it → full quality. Canvas 2D fallback: CPU-bound → reduce work.
     const densityScale = useWebGL ? 1 : (MEMBER_MODE ? 0.6 : 0.5);
-    const baseRenderScale = useWebGL ? 0.75 : (MEMBER_MODE ? 1.0 : 0.5);
+    // WebGL renders at the real screen resolution (capped at 2x): at the old 0.75 CSS
+    // scale a 2x screen got 0.375 px per screen pixel, so slow drift visibly stepped.
+    const baseRenderScale = useWebGL ? Math.min(window.devicePixelRatio || 1, 2) : (MEMBER_MODE ? 1.0 : 0.5);
     const renderScale = baseRenderScale;
 
     const scrollOffsets = new Float32Array(LAYERS.length);
@@ -375,6 +416,10 @@ export function ParallaxMoleculeCanvas({
     const initParticles = (w: number, h: number) => {
       const particles: Particle[] = [];
       const scale = Math.min(1, (w * h) / (1920 * 1080)) * densityScale;
+      // Spawn clear of the edge zones (outer 18%, see `edgeZone` in animate):
+      // spawning there makes the edge push sweep those particles toward the
+      // centre at up to ~3 px/frame during the first seconds after load.
+      const spawnMargin = w * 0.12;
       let globalIdx = 0;
       for (let li = 0; li < LAYERS.length; li++) {
         const cfg = LAYERS[li]!;
@@ -385,7 +430,7 @@ export function ParallaxMoleculeCanvas({
           const rawR = sMin + Math.random() * (sMax - sMin);
           const r = MEMBER_MODE ? Math.max(18, rawR * 4) : rawR;
           particles.push({
-            x: Math.random() * w, y: Math.random() * h,
+            x: spawnMargin + Math.random() * (w - 2 * spawnMargin), y: Math.random() * h,
             vx: (Math.random() - 0.5) * cfg.drift * 2,
             vy: (Math.random() - 0.5) * cfg.drift * 2,
             r,
@@ -467,7 +512,6 @@ export function ParallaxMoleculeCanvas({
 
       const deltaMs = lastFrameTime === 0 ? 1000 / 60 : Math.min(100, timestamp - lastFrameTime);
       const frameScale = Math.min(2.5, deltaMs / (1000 / 60));
-      const damping = Math.pow(0.985, frameScale);
       lastFrameTime = timestamp;
       const drawStart = performance.now();
       frameCount++;
@@ -566,9 +610,12 @@ export function ParallaxMoleculeCanvas({
           const distSq = dx * dx + dy * dy;
           if (distSq < repelRSq && distSq > 0) {
             const dist = Math.sqrt(distSq);
-            const force = (repelR - dist) / repelR;
-            p.vx += (dx / dist) * force * 0.2 * frameScale;
-            p.vy += (dy / dist) * force * 0.2 * frameScale;
+            // Spring push toward the edge of the repel circle: speeds up smoothly and
+            // clears the cursor in ~370 ms (the old weak push needed ~670 ms, which
+            // felt laggy). Speed-dependent friction below then lets it glide out.
+            const spring = (repelR - dist) * 0.005 * frameScale;
+            p.vx += (dx / dist) * spring;
+            p.vy += (dy / dist) * spring;
           }
         }
         if (edgeZone > 0 && p.renderY > -50 && p.renderY < h) {
@@ -577,7 +624,12 @@ export function ParallaxMoleculeCanvas({
         }
         p.vx += (Math.random() - 0.5) * 0.03 * frameScale;
         p.vy += (Math.random() - 0.5) * 0.03 * frameScale;
-        p.vx *= damping; p.vy *= damping;
+        // Friction eases from 0.985 (slow ambient drift) to 0.95 (fast, cursor-pushed)
+        // as speed rises, so pushed particles decelerate evenly over ~1.8 s instead
+        // of gliding for seconds or braking abruptly.
+        const fastT = Math.min(1, Math.max(0, (Math.sqrt(p.vx * p.vx + p.vy * p.vy) - 0.2) / 2.8));
+        const friction = Math.pow(0.985 - 0.035 * fastT * fastT * (3 - 2 * fastT), frameScale);
+        p.vx *= friction; p.vy *= friction;
         p.x += p.vx * frameScale; p.y += p.vy * frameScale;
         if (p.x < -50) p.x += w + 100; if (p.x > w + 50) p.x -= w + 100;
         if (p.y < -buf) p.y += wrapH; if (p.y > h + buf) p.y -= wrapH;
