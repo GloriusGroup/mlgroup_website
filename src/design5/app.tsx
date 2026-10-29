@@ -17,6 +17,7 @@ import { Contact } from "./components/Contact";
 import { Footer } from "./components/Footer";
 import { CookieBanner } from "./components/CookieBanner";
 import { ACCENT_PRESETS } from "./shared/accents";
+import { circuitHeroBg, circuitPageBg } from "./shared/circuitPatterns";
 
 // Experimental feature flags (URL params)
 const PARALLAX_MODE = true; //new URLSearchParams(window.location.search).get("parallax") === "true";
@@ -57,6 +58,13 @@ function App() {
     if (current?.className) el.classList.add(current.className);
     localStorage.setItem("accent_index", String(accentIndex));
   }, [accentIndex]);
+
+  useLayoutEffect(() => {
+    const preset = ACCENT_PRESETS[accentIndex]!;
+    const style = document.documentElement.style;
+    style.setProperty("--circuit-page-bg", circuitPageBg(preset.circuit));
+    style.setProperty("--circuit-hero-bg", circuitHeroBg(isDark ? preset.circuit : preset.circuitLight, !isDark));
+  }, [accentIndex, isDark]);
 
   useEffect(() => {
     let cancelled = false;
