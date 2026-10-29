@@ -34,11 +34,35 @@
     }
   },
   {
+    "name": "Lennox Brand",
+    "role": "Alumnus",
+    "image": "lennox_brand.png",
+    "email": "",
+    "description": "Former Bachelor's Student in the group.",
+    "supervisors": ["Maik Niedziella", "Ard van Noordenne"],
+    "thesis": "Data-Driven Prediction of Regioisomeric and Diastereomeric Outcomes in Photochemical [4+2]-Cycloadditions",
+    "links": {
+      "linkedin": "https://www.linkedin.com/in/lennox-brand/"
+    },
+    "section": "alumni"
+  },
+  {
     "name": "Latimah Bustillo Arrechea",
     "role": "Alumnus",
     "image": "latimah_bustillo_arrechea.png",
     "email": "",
     "description": "Former Visiting PhD Student in the group. Current position: University of Lisboa, Lisboa, Portugal.",
+    "links": {},
+    "section": "alumni"
+  },
+  {
+    "name": "Kea Coersmeier",
+    "role": "Alumnus",
+    "image": "kea_coersmeier.png",
+    "email": "",
+    "description": "Former Bachelor's Student in the group.",
+    "supervisors": ["Florian Boser", "Manh Hung Tran"],
+    "thesis": "Acceleration of a Molecular Fingerprint Algorithm and Data-driven Reaction Optimization",
     "links": {},
     "section": "alumni"
   },
@@ -258,29 +282,5 @@
     "supervisors": ["Manh Hung Tran", "Florian Boser"],
     "links": {},
     "section": "students"
-  },
-  {
-    "name": "Lennox Brand",
-    "role": "Alumnus",
-    "image": "lennox_brand.png",
-    "email": "",
-    "description": "Former Bachelor's Student in the group.",
-    "supervisors": ["Maik Niedziella", "Ard van Noordenne"],
-    "thesis": "Data-Driven Prediction of Regioisomeric and Diastereomeric Outcomes in Photochemical [4+2]-Cycloadditions",
-    "links": {
-      "linkedin": "https://www.linkedin.com/in/lennox-brand/"
-    },
-    "section": "alumni"
-  },
-  {
-    "name": "Kea Coersmeier",
-    "role": "Alumnus",
-    "image": "kea_coersmeier.png",
-    "email": "",
-    "description": "Former Bachelor's Student in the group.",
-    "supervisors": ["Florian Boser", "Manh Hung Tran"],
-    "thesis": "Acceleration of a Molecular Fingerprint Algorithm and Data-driven Reaction Optimization",
-    "links": {},
-    "section": "alumni"
   }
 ]
