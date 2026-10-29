@@ -328,6 +328,15 @@ button:focus-visible {
   transition: background var(--transition), border-color var(--transition), box-shadow var(--transition);
 }
 
+/* Firefox re-blurs the nav strip on every frame over the animated canvas (about
+   3x slower); drop the blur there and make the bar more opaque instead */
+@supports (-moz-appearance: none) {
+  .nav {
+    backdrop-filter: none;
+    background: color-mix(in srgb, var(--nav-bg), var(--bg) 60%);
+  }
+}
+
 .nav.scrolled {
   box-shadow: 0 1px 24px rgba(0, 0, 0, 0.2);
   border-bottom-color: var(--card-border);
@@ -589,10 +598,18 @@ button:focus-visible {
 .bg-circuit-board .hero::after,
 .bg-circuit-board .hero__traces--right {
   position: absolute;
-  inset: 0;
+  top: 0;
+  bottom: 0;
+  /* Only 20vw wide: the mask below fades out by 20vw anyway, and masking the
+     full width over the animated canvas is very slow in Firefox */
+  width: 20vw;
   z-index: 0;
   background-image: var(--circuit-hero-bg);
   pointer-events: none;
+  will-change: transform;
+}
+.bg-circuit-board .hero::after {
+  left: 0;
 }
 .bg-circuit-board .hero::after {
   content: '';
@@ -608,6 +625,7 @@ button:focus-visible {
 
 /* Right side — same pattern, horizontally flipped */
 .bg-circuit-board .hero__traces--right {
+  right: 0;
   transform: scaleX(-1);
   -webkit-mask-image:
     linear-gradient(to right, black 0%, transparent 20vw, transparent 100%),
