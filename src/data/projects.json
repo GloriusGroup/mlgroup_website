@@ -1,5 +1,16 @@
 [
   {
+    "name": "TACIT",
+    "description": "TAckling Chemistry through ImpliciT negative learning — Reaction outcome prediction trained on positive-only data. Learns to distinguish productive from unproductive transformations without explicit negative examples.",
+    "url": "https://github.com/GloriusGroup/tacit",
+    "website": "https://gloriusgroup.github.io/tacit/",
+    "paper": "https://doi.org/10.26434/chemrxiv.15011216/v1",
+    "language": "Python",
+    "license": "MIT",
+    "tags": ["negative data", "reaction prediction", "implicit learning"],
+    "image": "tacit.png"
+  },
+  {
     "name": "pyGecko",
     "description": "Open-source Python library for parsing, processing, and analysis of GC-MS and GC-FID raw data. Enables calibration-free quantification and automated analysis of 96-reaction arrays in under a minute.",
     "url": "https://github.com/GloriusGroup/pyGecko",

@@ -5,6 +5,7 @@ import invent from "./invent.webp";
 import entdecker from "./entdecker.webp";
 import substrate_selection from "./substrate_selection.webp";
 import easychml from "./easychml.webp";
+import tacit from "./tacit.webp";
 
 // Map from the local filename (used in projects.json "image" field) to the bundled URL
 export const projectImages: Record<string, string> = {
@@ -15,4 +16,5 @@ export const projectImages: Record<string, string> = {
   "entdecker.png": entdecker,
   "substrate_selection.jpeg": substrate_selection,
   "easychml.jpg": easychml,
+  "tacit.png": tacit,
 };

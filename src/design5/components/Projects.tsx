@@ -1,6 +1,6 @@
 import React from "react";
 import { useScrollReveal } from "../shared/hooks";
-import { ExternalLinkIcon, WebsiteIcon } from "../shared/icons";
+import { ExternalLinkIcon, PaperIcon, WebsiteIcon } from "../shared/icons";
 import type { Project } from "../shared/types";
 import projectsData from "../../data/projects.json";
 import { projectImages } from "../../data/assets/projects";
@@ -12,6 +12,41 @@ function resolveImage(image: string | undefined): string | undefined {
   if (image.startsWith("http://") || image.startsWith("https://")) return image;
   // Otherwise look up the local filename in the static import map
   return projectImages[image] ?? undefined;
+}
+
+function ProjectLinkButton({ href, icon, label }: { href: string; icon: React.ReactNode; label: string }) {
+  return (
+    <a
+      href={href}
+      target="_blank"
+      rel="noopener noreferrer"
+      className="project-card__website"
+      style={{
+        display: "inline-flex",
+        alignItems: "center",
+        gap: "0.4rem",
+        padding: "0.35rem 0.75rem",
+        borderRadius: "6px",
+        border: "1px solid var(--accent)",
+        color: "var(--accent)",
+        fontSize: "0.82rem",
+        fontWeight: 500,
+        textDecoration: "none",
+        transition: "background 0.2s, color 0.2s",
+      }}
+      onMouseEnter={(e) => {
+        e.currentTarget.style.background = "var(--accent)";
+        e.currentTarget.style.color = "#fff";
+      }}
+      onMouseLeave={(e) => {
+        e.currentTarget.style.background = "transparent";
+        e.currentTarget.style.color = "var(--accent)";
+      }}
+    >
+      <span style={{ width: "14px", height: "14px", display: "inline-flex" }}>{icon}</span>
+      {label}
+    </a>
+  );
 }
 
 export function Projects() {
@@ -84,42 +119,16 @@ export function Projects() {
                 <span className="project-card__tag" key={tag}>{tag}</span>
               ))}
             </div>
-            {proj.website && (
-              <a
-                href={proj.website}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="project-card__website"
-                style={{
-                  display: "inline-flex",
-                  alignItems: "center",
-                  gap: "0.4rem",
-                  marginTop: "0.75rem",
-                  padding: "0.35rem 0.75rem",
-                  borderRadius: "6px",
-                  border: "1px solid var(--accent)",
-                  color: "var(--accent)",
-                  fontSize: "0.82rem",
-                  fontWeight: 500,
-                  textDecoration: "none",
-                  alignSelf: "flex-start",
-                  transition: "background 0.2s, color 0.2s",
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.background = "var(--accent)";
-                  e.currentTarget.style.color = "#fff";
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.background = "transparent";
-                  e.currentTarget.style.color = "var(--accent)";
-                }}
-              >
-                <span style={{ width: "14px", height: "14px", display: "inline-flex" }}>
-                  <WebsiteIcon />
-                </span>
-                Visit Website
-              </a>
-            )}
+            {proj.website || proj.paper ? (
+              <div style={{ display: "flex", flexWrap: "wrap", gap: "0.5rem", marginTop: "0.75rem" }}>
+                {proj.website && (
+                  <ProjectLinkButton href={proj.website} icon={<WebsiteIcon />} label="Visit Website" />
+                )}
+                {proj.paper && (
+                  <ProjectLinkButton href={proj.paper} icon={<PaperIcon />} label="Read Paper" />
+                )}
+              </div>
+            ) : null}
           </div>
         ))}
       </div>

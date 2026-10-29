@@ -1,5 +1,15 @@
 [
   {
+    "title": "Implicit Learning: Reaction Outcome Prediction from Positive-Only Data",
+    "authors": ["N. Wierich", "N. Dobberstein", "F. Glorius"],
+    "journal": "ChemRxiv",
+    "year": 2026,
+    "volume": "",
+    "pages": "",
+    "doi": "https://doi.org/10.26434/chemrxiv.15011216/v1",
+    "tags": ["negative data", "reaction prediction", "implicit learning"]
+  },
+  {
     "title": "PRISM, a Bidirectional NMR Foundation Model: From Peak List to Structure and Back",
     "authors": ["A. Hoque", "F. Glorius"],
     "journal": "Angew. Chem. Int. Ed.",

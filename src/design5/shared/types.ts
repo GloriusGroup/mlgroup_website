@@ -17,6 +17,8 @@ export interface Project {
   description: string;
   url: string;
   website?: string;
+  /** Link to the associated paper or preprint */
+  paper?: string;
   language: string;
   license: string;
   tags: string[];
