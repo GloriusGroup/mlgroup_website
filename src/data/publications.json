@@ -1,5 +1,15 @@
 [
   {
+    "title": "What Makes a Laboratory Self-Driving? Mapping the SDL Terminology Landscape and Introducing the FLEx Categorization Framework",
+    "authors": ["A. Böser", "K. Kochale", "P. Courtney", "T. Teutenberg", "F. Boser", "G. Wu", "N. Deshpande", "C. P. Haas", "K. A. Cheung", "S. Zhang", "R. Gudipati", "A. Lapkin", "F. Glorius", "S. Bräse"],
+    "journal": "ChemRxiv",
+    "year": 2026,
+    "volume": "",
+    "pages": "",
+    "doi": "https://doi.org/10.26434/chemrxiv.15012533/v1",
+    "tags": ["self-driving labs", "automation", "perspective"]
+  },
+  {
     "title": "Implicit Learning: Reaction Outcome Prediction from Positive-Only Data",
     "authors": ["N. Wierich", "N. Dobberstein", "F. Glorius"],
     "journal": "ChemRxiv",
