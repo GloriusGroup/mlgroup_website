@@ -1,5 +1,15 @@
 [
   {
+    "title": "Parallel and Resource-Efficient Bayesian Reaction Optimization",
+    "authors": ["F. Katzenburg", "F. Boser", "J. W. Sin", "B. Ranković", "S. Kopf", "F. Schreiner", "K. Coersmeier", "C. G. Daniliuc", "M. R. Hansen", "P. Schwaller", "F. Glorius"],
+    "journal": "ChemRxiv",
+    "year": 2026,
+    "volume": "",
+    "pages": "",
+    "doi": "https://doi.org/10.26434/chemrxiv.15012572/v1",
+    "tags": ["Bayesian optimization", "high-throughput", "reaction optimization"]
+  },
+  {
     "title": "What Makes a Laboratory Self-Driving? Mapping the SDL Terminology Landscape and Introducing the FLEx Categorization Framework",
     "authors": ["A. Böser", "K. Kochale", "P. Courtney", "T. Teutenberg", "F. Boser", "G. Wu", "N. Deshpande", "C. P. Haas", "K. A. Cheung", "S. Zhang", "R. Gudipati", "A. Lapkin", "F. Glorius", "S. Bräse"],
     "journal": "ChemRxiv",
